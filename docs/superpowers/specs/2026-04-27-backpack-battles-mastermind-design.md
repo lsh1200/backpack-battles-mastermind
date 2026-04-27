@@ -15,7 +15,7 @@ The first version is a PWA/local web app with an LLM vision layer, deterministic
 - BPB item database reference: https://bpb-builds.vercel.app/items
 - Hybrid computer vision reference: https://github.com/SFStefenon/Digital_ED
 
-BPB Builds is treated as a strategy and item reference. Digital_ED is used as architectural inspiration only: combine image/ML recognition with deterministic geometry and rules. This project will not copy Digital_ED's engineering-drawing pipeline, because Backpack Battles screenshots have a different layout, data model, and user workflow.
+BPB Builds is treated as a primary data source, not only a loose reference. The app should import and cache as much structured BPB data locally as is technically and ethically reasonable: item names, images, rarities, tags, effects, recipes, patch metadata, and public build metadata. Digital_ED is used as architectural inspiration only: combine image/ML recognition with deterministic geometry and rules. This project will not copy Digital_ED's engineering-drawing pipeline, because Backpack Battles screenshots have a different layout, data model, and user workflow.
 
 ## Product Flow
 
@@ -39,8 +39,9 @@ V1 includes:
 - LLM vision extraction into structured JSON.
 - Pixel validation confidence report.
 - Active correction loop for uncertain fields.
+- Local BPB data import/cache for item and build grounding.
 - Beginner strategy knowledge from the provided guide.
-- Initial curated references to BPB Builds and known beginner plans.
+- Curated beginner plans connected to exact item records from the local BPB cache.
 - Recommendation output with best move, reason, plan, next targets, and assumptions.
 - Local fixture storage for corrected examples.
 - Unit tests for strategy rules and recommendation ranking.
@@ -52,7 +53,7 @@ V1 does not include:
 - Native Play Store packaging.
 - Full combat simulation.
 - Perfect item recognition without confirmation.
-- Complete scraping or mirroring of BPB Builds.
+- Unbounded scraping or mirroring of BPB Builds beyond data needed for local coaching.
 - Guaranteed meta-perfect recommendations for every game patch.
 
 The success criterion is practical: the user uploads a real Android screenshot and gets advice that is useful for the next move, while the system honestly asks for confirmation when recognition is not good enough.
@@ -68,13 +69,45 @@ Core modules:
 - `PixelValidator`: runs deterministic checks on the image to locate likely UI regions, detect screenshot shape, sample anchors, and estimate occupied/empty shop and backpack regions.
 - `CorrectionLoop`: turns uncertain fields into targeted confirmation questions and records the user's corrections.
 - `KnowledgeBase`: stores strategy notes from the local guide, curated item/build references, class plans, signpost items, and round-based shop heuristics.
+- `BpbDataImporter`: imports BPB item/build data into a normalized local cache and refreshes it on demand.
+- `BpbDataStore`: provides indexed local lookups for item names, icons, tags, rarities, effects, recipes, patches, build snapshots, and build tier lists.
 - `DecisionEngine`: ranks candidate actions using rules and the corrected game state.
 - `CoachRenderer`: turns the selected action into plain learning-oriented advice.
 - `FixtureStore`: saves screenshots, extracted state, corrections, validation reports, and final recommendations for future tests and recognition tuning.
 
 Primary data flow:
 
-`Screenshot -> VisionState -> ValidationReport -> CorrectionQuestions -> CorrectedGameState -> CandidateActions -> Recommendation -> Fixture`
+`Screenshot -> VisionState -> ValidationReport -> CorrectionQuestions -> CorrectedGameState -> BPB-grounded CandidateActions -> Recommendation -> Fixture`
+
+## BPB Local Data Grounding
+
+The mastermind should avoid making strategy claims from memory alone. It should ground item-specific advice in a local BPB cache whenever possible.
+
+Initial BPB investigation found:
+
+- The `/items` page exposes a database view with 517 items.
+- The `/api/builds` endpoint returns public build JSON, including build metadata, classes, subclasses, bags, difficulty, tier lists, authors, snapshots, and item IDs.
+- `/api/items` returned 404 during investigation, so item details may need to be extracted from the site's bundled JavaScript/data payload rather than a clean public items endpoint.
+- The site serves item images from `https://awerc.github.io/bpb-cdn/`, which can support item-icon matching and correction choices.
+
+The importer should run as an explicit local command or admin action, not as aggressive background scraping. It should cache source URLs, fetch timestamps, detected patch version, and a normalized schema so later recommendation logic can cite the data it used.
+
+The local cache should include:
+
+- item ID/GID
+- canonical name
+- aliases and fuzzy-search keys
+- class
+- rarity
+- type and tags
+- effect text
+- shop availability text, if available
+- recipe/combination data, if available
+- grid shape and image URL, if available
+- patch history, if available
+- public build references that use the item
+
+The LLM should receive only the relevant retrieved BPB records for the current screenshot, not the entire database. The decision engine should use the same records for rule checks. If an item is not found in the local BPB cache, the app must mark the item as ungrounded and ask for confirmation or avoid item-specific advice.
 
 ## Data Model
 
@@ -170,7 +203,7 @@ The initial class knowledge should be curated from the guide:
 - Berserker: simple double-axe plan, gloves, dragon-scaled items, and limited clear pivots.
 - Pyromancer: beginner fire/dragon plan around Burning Blade, heat, fire items, dragons, and amulet-driven pivots.
 
-The decision engine should rank actions conservatively. It should prefer teaching solid fundamentals over forcing flashy high-variance plays unless the board state clearly supports a pivot.
+The decision engine should rank actions conservatively. It should prefer teaching solid fundamentals over forcing flashy high-variance plays unless the board state clearly supports a pivot. Item-specific claims should cite local BPB cache fields or local curated guide notes internally before being shown as advice.
 
 ## UI
 
@@ -203,6 +236,8 @@ Testing should cover:
 - Strategy rule unit tests.
 - Recommendation ranking tests for known beginner scenarios.
 - Vision schema validation tests using mocked LLM responses.
+- BPB importer tests using saved HTTP fixtures and schema validation.
+- BPB lookup tests for exact names, aliases, item IDs, and build references.
 - Pixel validator tests with sample screenshots and synthetic crops.
 - Correction loop tests proving uncertain fields produce targeted prompts.
 - Fixture regression tests using the user's corrected screenshots.
@@ -220,7 +255,7 @@ The LLM API key must stay server-side in a local environment variable or deploym
 
 - Exact LLM provider and model will be chosen during implementation based on available API keys and vision support.
 - The first fixture storage can be filesystem-backed for local development, then moved to a database only if needed.
-- BPB Builds integration starts as curated references and links. A full structured import is deferred until the core loop works.
+- BPB Builds item import method will be finalized during implementation: prefer a public JSON/API source if available; otherwise use a controlled extractor against the site data payload and store only the normalized fields needed for coaching.
 
 ## Approval Record
 
@@ -231,3 +266,4 @@ The user approved:
 - LLM vision plus deterministic pixel checks.
 - Coaching assistant scope rather than perfect autoplayer.
 - Active confirmation and correction loop for uncertain recognition.
+- Local BPB data grounding so the LLM and rules engine use accurate item/build data instead of relying on memory.
