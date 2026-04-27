@@ -1,0 +1,264 @@
+import { describe, expect, it } from "vitest";
+import type { BpbCache } from "@/lib/bpb/schemas";
+import type { GameState } from "@/lib/core/types";
+import { recommendNextAction } from "./recommend";
+
+const bpbCache: BpbCache = {
+  fetchedAt: "2026-04-27T00:00:00.000Z",
+  patchVersion: "1.1.1",
+  patchDate: "2026-04-03T08:01:07.000Z",
+  sourceUrls: ["https://bpb-builds.vercel.app/items"],
+  items: [
+    {
+      id: 44,
+      name: "Broom",
+      aliases: ["broom"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/Broom.webp",
+      grounded: true,
+      tags: [],
+    },
+    {
+      id: 51,
+      name: "Whetstone",
+      aliases: ["whetstone"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/Whetstone.webp",
+      grounded: true,
+      tags: [],
+    },
+    {
+      id: 91,
+      name: "Mana Orb",
+      aliases: ["mana orb", "manaorb"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/ManaOrb.webp",
+      grounded: true,
+      tags: [],
+    },
+    {
+      id: 98,
+      name: "Hero Sword",
+      aliases: ["hero sword", "herosword"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/HeroSword.webp",
+      grounded: true,
+      tags: [],
+    },
+  ],
+  builds: [],
+};
+
+function baseState(overrides: Partial<GameState>): GameState {
+  return {
+    round: 3,
+    gold: 6,
+    lives: 5,
+    wins: 1,
+    className: "Ranger",
+    bagChoice: "Ranger Bag",
+    skills: [],
+    subclass: null,
+    shopItems: [],
+    backpackItems: [{ name: "Hero Sword", location: "bag", groundedBpbId: 98 }],
+    storageItems: [],
+    userGoal: "learn",
+    uncertainFields: [],
+    ...overrides,
+  };
+}
+
+describe("recommendNextAction", () => {
+  it("prioritizes sale items because they are low-risk tempo", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        shopItems: [{ name: "Broom", slot: "shop-1", sale: true, price: 3, groundedBpbId: 44 }],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.bestAction.type).toBe("buy");
+    expect(recommendation.bestAction.target).toContain("Broom");
+    expect(recommendation.shortReason).toContain("sale");
+  });
+
+  it("does not recommend buying a sale item the player cannot afford", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        gold: 1,
+        shopItems: [{ name: "Broom", slot: "shop-1", sale: true, price: 3, groundedBpbId: 44 }],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.bestAction.type).not.toBe("buy");
+    expect(recommendation.bestAction.target).not.toBe("Broom");
+  });
+
+  it("does not recommend buying a sale item when gold is unknown", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        gold: null,
+        shopItems: [{ name: "Broom", slot: "shop-1", sale: true, price: 3, groundedBpbId: 44 }],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.bestAction.type).not.toBe("buy");
+  });
+
+  it("does not recommend buying a sale item when the visible price is unknown", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        shopItems: [{ name: "Broom", slot: "shop-1", sale: true, groundedBpbId: 44 }],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.bestAction.type).not.toBe("buy");
+  });
+
+  it("does not recommend buying ungrounded sale items", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        shopItems: [{ name: "Mystery Blade", slot: "shop-1", sale: true, price: 1 }],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.bestAction.type).not.toBe("buy");
+    expect(recommendation.assumptionsMade.some((text) => text.includes("Mystery Blade"))).toBe(true);
+  });
+
+  it("flags ungrounded item-specific advice as an assumption", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        shopItems: [{ name: "Mystery Blade", slot: "shop-2", sale: false }],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.assumptionsMade.some((text) => text.includes("Mystery Blade"))).toBe(true);
+  });
+
+  it("treats cache items marked ungrounded as ungrounded", () => {
+    const ungroundedCache: BpbCache = {
+      ...bpbCache,
+      items: bpbCache.items.map((item) => ({ ...item, grounded: false })),
+    };
+
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        shopItems: [{ name: "Broom", slot: "shop-1", sale: true, price: 1, groundedBpbId: 44 }],
+      }),
+      bpbCache: ungroundedCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.bestAction.type).not.toBe("buy");
+    expect(recommendation.assumptionsMade.some((text) => text.includes("Broom"))).toBe(true);
+    expect(recommendation.planSupported).not.toContain("Hero Sword");
+  });
+
+  it("keeps class plan advice generic when the cache is unavailable", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({}),
+      bpbCache: null,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.planSupported).not.toContain("Hero Sword");
+    expect(recommendation.planSupported).not.toContain("Broom");
+    expect(recommendation.planSupported).not.toContain("Whetstone");
+    expect(recommendation.planSupported).toContain("Ranger");
+  });
+
+  it("keeps class plan advice generic when guide items are not all grounded", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({}),
+      bpbCache: { ...bpbCache, items: bpbCache.items.filter((item) => item.name === "Broom") },
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.planSupported).not.toContain("Hero Sword");
+    expect(recommendation.planSupported).not.toContain("Whetstone");
+    expect(recommendation.planSupported).toContain("Ranger");
+  });
+
+  it("keeps class plan advice generic when required guide items are missing from the current state", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({}),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.planSupported).not.toContain("Hero Sword");
+    expect(recommendation.planSupported).not.toContain("Broom");
+    expect(recommendation.planSupported).not.toContain("Whetstone");
+    expect(recommendation.planSupported).toContain("Ranger");
+  });
+
+  it("uses specific class plan advice when required guide items are present and grounded", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        backpackItems: [
+          { name: "Hero Sword", location: "bag", groundedBpbId: 98 },
+          { name: "Broom", location: "bag", groundedBpbId: 44 },
+        ],
+        storageItems: [{ name: "Whetstone", location: "storage", groundedBpbId: 51 }],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.planSupported).toContain("Hero Sword");
+    expect(recommendation.planSupported).toContain("Broom");
+    expect(recommendation.planSupported).toContain("Whetstone");
+  });
+
+  it("keeps non-Ranger class plans generic when guide items are not grounded", () => {
+    const unrelatedCache: BpbCache = {
+      ...bpbCache,
+      items: bpbCache.items.filter((item) => item.name === "Broom"),
+    };
+
+    const reaperRecommendation = recommendNextAction({
+      gameState: baseState({ className: "Reaper", backpackItems: [] }),
+      bpbCache: unrelatedCache,
+      correctionPromptsUsed: [],
+    });
+    const berserkerRecommendation = recommendNextAction({
+      gameState: baseState({ className: "Berserker", backpackItems: [] }),
+      bpbCache: unrelatedCache,
+      correctionPromptsUsed: [],
+    });
+    const pyromancerRecommendation = recommendNextAction({
+      gameState: baseState({ className: "Pyromancer", backpackItems: [] }),
+      bpbCache: unrelatedCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(reaperRecommendation.planSupported.toLowerCase()).not.toContain("cauldron");
+    expect(reaperRecommendation.planSupported.toLowerCase()).not.toContain("staff");
+    expect(berserkerRecommendation.planSupported.toLowerCase()).not.toContain("double");
+    expect(berserkerRecommendation.planSupported.toLowerCase()).not.toContain("axe");
+    expect(pyromancerRecommendation.planSupported).not.toContain("Burning Blade");
+  });
+
+  it("recommends rolling less when the round is too early for rare targets", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        round: 2,
+        gold: 2,
+        shopItems: [],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.bestAction.type).toBe("start-battle");
+    expect(recommendation.shortReason).toContain("tempo");
+  });
+});
