@@ -1,0 +1,37 @@
+{
+  "data": [
+    {
+      "id": 3418,
+      "title": "empower spike berserker",
+      "class": "Berserker",
+      "subclass": "Wolf Emblem",
+      "bag": "Duffle Bag",
+      "difficulty": "Easy",
+      "updatedAt": "2026-04-26T06:41:08.472+00:00",
+      "totalRating": 7,
+      "views": 120,
+      "commentsCount": 2,
+      "tiers": [
+        { "color": "#FF7F7F", "items": "42 44 98", "title": "S" }
+      ],
+      "author": {
+        "id": "91AsU6",
+        "name": "iAngle",
+        "image": "https://avatars.steamstatic.com/5a1e9ee36ded9d65dff948c0d6bf85bde020b8c8_full.jpg",
+        "rating": 0
+      },
+      "snapshots": [
+        {
+          "order": 0,
+          "buildId": 3418,
+          "name": null,
+          "items": [
+            { "gid": 42, "x": 1, "y": 2, "r": 0 },
+            { "gid": 98, "x": 2, "y": 2, "r": 90 }
+          ]
+        }
+      ]
+    }
+  ],
+  "pagination": { "limit": 20, "offset": 0, "total": 1 }
+}
