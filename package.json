@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "refresh:bpb": "tsx scripts/refresh-bpb.ts"
+    "refresh:bpb": "tsx scripts/refresh-bpb.ts",
+    "enrich:bpb": "tsx scripts/enrich-bpb-browser.ts"
   },
   "dependencies": {
     "cheerio": "^1.1.2",
