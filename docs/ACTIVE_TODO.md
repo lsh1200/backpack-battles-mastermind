@@ -141,9 +141,35 @@ These are real ideas, but they must not interrupt the active task unless they be
 
 ### Task 12: Deterministic Item Recognition Primary Pipeline
 
-Status: `in_progress`
+Status: `done`
 
 Goal: Replace LLM item-name reading with deterministic local item recognition as the primary path. Use screenshot regions, BPB item icons/templates, pixel/feature matching, confidence scoring, and targeted user confirmation when confidence is low.
+
+Implemented:
+
+- Added `src/lib/vision/item-recognizer.ts` to crop configured shop/backpack slots, compare them to grounded BPB icon templates with pixel-feature scores, require a clear top-candidate gap, and return ranked candidates plus uncertain fields.
+- Wired `/api/analyze` so deterministic recognition runs before the OpenAI vision audit; local matches overwrite LLM item guesses while preserving sale/price metadata.
+- Wired Codex handoff creation/resume so deterministic candidates are written into the prompt and persisted in `handoff.json`; resume reapplies the stored local report before recommendations.
+- Extended correction questions and `applyCorrections` to support backpack item names, not only shop item names.
+- Updated OpenAI and Codex prompt policy so deterministic candidates are primary and the LLM only audits coarse fields, metadata, or uncertain fields.
+
+Acceptance Checklist:
+
+- [x] Item recognition has a deterministic local-first path backed by BPB item icons/templates.
+- [x] Low-confidence or near-tie template matches produce confirmation questions instead of confident item names.
+- [x] Correction questions include ranked local candidates for shop and backpack item names.
+- [x] LLM prompts receive deterministic recognition context and are told not to replace high-confidence local item names.
+- [x] Codex manual mode receives and stores deterministic recognition context.
+- [x] Resume flow blocks recommendations and asks for confirmation when deterministic recognition is uncertain.
+
+Verification Evidence:
+
+- Commit: `3f827c6 feat: add deterministic item recognizer`
+- `npm.cmd run lint` passed.
+- `npx.cmd tsc --noEmit -p tsconfig.json` passed.
+- `npm.cmd run test` passed: 16 files, 75 tests.
+- `npm.cmd run build` passed.
+- Browser resume check passed at `http://localhost:3000` with handoff `f50a00d2-334f-4199-b4b9-1faca6b2c48d`: deterministic report was stored, no console/page errors, and the UI showed confirmation prompts for shop and backpack item names instead of rendering a recommendation from uncertain recognition.
 
 ### Task 13: Board Position Correction UI
 
