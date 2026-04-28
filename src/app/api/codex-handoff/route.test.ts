@@ -35,6 +35,16 @@ async function screenshotFile(): Promise<File> {
       background: "#202020",
     },
   })
+    .composite([
+      {
+        input: Buffer.from(
+          `<svg width="1200" height="700" xmlns="http://www.w3.org/2000/svg">
+            <rect x="20" y="22" width="55" height="40" fill="#f6d85f"/>
+            <rect x="128" y="25" width="52" height="45" fill="#326dff"/>
+          </svg>`,
+        ),
+      },
+    ])
     .png()
     .toBuffer();
   const bytes = new Uint8Array(image.byteLength);
@@ -125,11 +135,19 @@ describe("Codex handoff API", () => {
     );
     const cropBytes = Buffer.from(await cropResponse.arrayBuffer());
     const cropMetadata = await sharp(cropBytes).metadata();
+    const cropPixels = await sharp(cropBytes).removeAlpha().raw().toBuffer();
+    let bluePixels = 0;
+    for (let index = 0; index < cropPixels.length; index += 3) {
+      if ((cropPixels[index] ?? 0) < 80 && (cropPixels[index + 1] ?? 0) < 130 && (cropPixels[index + 2] ?? 0) > 180) {
+        bluePixels += 1;
+      }
+    }
 
     expect(cropResponse.status).toBe(200);
     expect(cropResponse.headers.get("content-type")).toBe("image/png");
     expect(cropMetadata.width).toBeGreaterThan(0);
     expect(cropMetadata.height).toBeGreaterThan(0);
+    expect(bluePixels).toBeGreaterThan(100);
 
     await writeFile(handoffPath, `${JSON.stringify(handoff, null, 2)}\n`, "utf8");
     await writeFile(created.resultPath, `${JSON.stringify({ gameState })}\n`, "utf8");

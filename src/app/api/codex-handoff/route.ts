@@ -29,6 +29,24 @@ function clampCrop(crop: Crop, imageWidth: number, imageHeight: number): Crop | 
   return width > 1 && height > 1 ? { x, y, width, height } : null;
 }
 
+function displayCrop(match: NonNullable<CodexHandoff["itemRecognitionReport"]>["matches"][number]): Crop {
+  if (match.region === "shop") {
+    return {
+      x: match.crop.x - match.crop.width * 0.15,
+      y: match.crop.y - match.crop.height * 0.18,
+      width: match.crop.width * 2.3,
+      height: match.crop.height * 1.36,
+    };
+  }
+
+  return {
+    x: match.crop.x - match.crop.width * 0.18,
+    y: match.crop.y - match.crop.height * 0.18,
+    width: match.crop.width * 1.36,
+    height: match.crop.height * 1.36,
+  };
+}
+
 async function cropHandoffScreenshot(handoff: CodexHandoff, field: string): Promise<Buffer | null> {
   const match = handoff.itemRecognitionReport?.matches.find((candidate) => candidate.field === field);
   if (!match) {
@@ -37,7 +55,7 @@ async function cropHandoffScreenshot(handoff: CodexHandoff, field: string): Prom
 
   const image = await readFile(handoff.screenshotPath);
   const metadata = await sharp(image).rotate().metadata();
-  const crop = clampCrop(match.crop, metadata.width ?? 0, metadata.height ?? 0);
+  const crop = clampCrop(displayCrop(match), metadata.width ?? 0, metadata.height ?? 0);
   if (!crop) {
     return null;
   }
