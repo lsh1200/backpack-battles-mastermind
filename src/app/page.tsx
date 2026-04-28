@@ -8,6 +8,7 @@ import { HandoffResumePanel } from "@/components/HandoffResumePanel";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { RecommendationPanel } from "@/components/RecommendationPanel";
 import { ScreenshotIntake } from "@/components/ScreenshotIntake";
+import { codexHandoffScreenshotUrl, codexHandoffStatusUrl } from "@/lib/codex-handoff/client";
 import type { AnalysisResult } from "@/lib/core/types";
 import { applyCorrections } from "@/lib/vision/correction";
 
@@ -129,12 +130,19 @@ export default function HomePage() {
     setError(null);
 
     try {
-      const response = await fetch(`/api/codex-handoff?id=${encodeURIComponent(handoffId)}`);
+      const response = await fetch(codexHandoffStatusUrl(handoffId));
       const json = await response.json();
       if (!response.ok) {
         throw new Error(json.error ?? "Codex handoff resume failed");
       }
 
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+      }
+
+      setFile(null);
+      setPreviewUrl(codexHandoffScreenshotUrl(handoffId));
       setHandoff({
         handoffId: json.handoffId,
         status: json.status,
@@ -185,13 +193,14 @@ export default function HomePage() {
       return;
     }
 
+    const handoffId = handoff.handoffId;
     const controller = new AbortController();
     let active = true;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     async function pollHandoff() {
       try {
-        const response = await fetch(`/api/codex-handoff?id=${handoff?.handoffId}`, { signal: controller.signal });
+        const response = await fetch(codexHandoffStatusUrl(handoffId), { signal: controller.signal });
         const json = await response.json();
         if (!response.ok) {
           throw new Error(json.error ?? "Codex handoff polling failed");

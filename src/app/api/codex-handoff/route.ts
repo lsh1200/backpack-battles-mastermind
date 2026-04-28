@@ -44,7 +44,9 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const handoffId = new URL(request.url).searchParams.get("id");
+  const url = new URL(request.url);
+  const handoffId = url.searchParams.get("id");
+  const asset = url.searchParams.get("asset");
 
   if (!handoffId) {
     return NextResponse.json({ error: "handoff id is required" }, { status: 400 });
@@ -52,6 +54,23 @@ export async function GET(request: Request) {
 
   try {
     const handoff = await readCodexHandoff(handoffId);
+
+    if (asset === "screenshot") {
+      const image = await readFile(handoff.screenshotPath);
+      const body = image.buffer.slice(image.byteOffset, image.byteOffset + image.byteLength) as ArrayBuffer;
+
+      return new NextResponse(body, {
+        headers: {
+          "cache-control": "no-store",
+          "content-type": handoff.mimeType,
+        },
+      });
+    }
+
+    if (asset) {
+      return NextResponse.json({ error: "unsupported handoff asset" }, { status: 400 });
+    }
+
     const handoffResult = await readCodexHandoffResult(handoffId);
     const prompt = await readFile(handoff.promptPath, "utf8");
     const handoffMetadata = {

@@ -79,6 +79,15 @@ describe("Codex handoff API", () => {
     const pendingResponse = await GET(new Request(`http://localhost/api/codex-handoff?id=${created.handoffId}`));
     await expect(pendingResponse.json()).resolves.toMatchObject({ status: "pending", handoffId: created.handoffId });
 
+    const screenshotResponse = await GET(
+      new Request(`http://localhost/api/codex-handoff?id=${created.handoffId}&asset=screenshot`),
+    );
+    const screenshotBytes = await screenshotResponse.arrayBuffer();
+
+    expect(screenshotResponse.status).toBe(200);
+    expect(screenshotResponse.headers.get("content-type")).toBe("image/png");
+    expect(screenshotBytes.byteLength).toBeGreaterThan(0);
+
     await writeFile(created.resultPath, `${JSON.stringify({ gameState })}\n`, "utf8");
 
     const completeResponse = await GET(new Request(`http://localhost/api/codex-handoff?id=${created.handoffId}`));
