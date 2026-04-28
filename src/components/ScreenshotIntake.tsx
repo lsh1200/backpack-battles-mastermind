@@ -2,6 +2,8 @@
 
 /* eslint-disable @next/next/no-img-element -- User-selected blob URLs are local previews, not optimized app assets. */
 
+import { useRef } from "react";
+
 type ScreenshotIntakeProps = {
   previewUrl: string | null;
   busy: boolean;
@@ -19,6 +21,8 @@ export function ScreenshotIntake({
   onModeChange,
   onAnalyze,
 }: ScreenshotIntakeProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
   return (
     <section className="panel intake-panel" aria-label="Screenshot upload">
       <div className="mode-toggle" role="group" aria-label="Analysis mode">
@@ -37,19 +41,23 @@ export function ScreenshotIntake({
           Codex test
         </button>
       </div>
-      <label className="file-drop">
+      <div className="file-drop">
         <input
           accept="image/png,image/jpeg,image/webp"
+          ref={inputRef}
           type="file"
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) {
               onFile(file);
+              event.target.value = "";
             }
           }}
         />
-        <span>{previewUrl ? "Change screenshot" : "Choose screenshot"}</span>
-      </label>
+        <button className="file-button" disabled={busy} type="button" onClick={() => inputRef.current?.click()}>
+          {previewUrl ? "Change screenshot" : "Choose screenshot"}
+        </button>
+      </div>
       {previewUrl ? (
         <img alt="Uploaded Backpack Battles screenshot" className="screenshot-preview" src={previewUrl} />
       ) : null}

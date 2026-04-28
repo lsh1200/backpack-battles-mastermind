@@ -10,6 +10,18 @@ const bpbCache: BpbCache = {
   sourceUrls: ["https://bpb-builds.vercel.app/items"],
   items: [
     {
+      id: 1,
+      name: "Wooden Sword",
+      aliases: ["wooden sword", "woodensword"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/WoodenSword.webp",
+      grounded: true,
+      type: "Melee Weapon",
+      shape: [[1], [1]],
+      gridWidth: 1,
+      gridHeight: 2,
+      tags: [],
+    },
+    {
       id: 44,
       name: "Broom",
       aliases: ["broom"],
@@ -63,6 +75,22 @@ const bpbCache: BpbCache = {
       aliases: ["mana orb", "manaorb"],
       imageUrl: "https://awerc.github.io/bpb-cdn/i/ManaOrb.webp",
       grounded: true,
+      tags: [],
+    },
+    {
+      id: 67,
+      name: "Ranger Bag",
+      aliases: ["ranger bag", "rangerbag"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/RangerBag.webp",
+      grounded: true,
+      type: "Bag",
+      shape: [
+        [1, 1],
+        [1, 1],
+        [1, 1],
+      ],
+      gridWidth: 2,
+      gridHeight: 3,
       tags: [],
     },
     {
@@ -143,7 +171,6 @@ describe("recommendNextAction", () => {
     expect(recommendation.placementAdvice).toEqual([
       "Confirm bag placement and bag shape before treating layout moves as exact.",
       "Ranger Bag placement is unknown.",
-      "Ranger Bag footprint is unknown.",
     ]);
   });
 
@@ -194,6 +221,37 @@ describe("recommendNextAction", () => {
     expect(recommendation.layoutOptions[0].moves).toContain("Keep Wooden Sword at (1, 1).");
   });
 
+  it("uses BPB bag shape data when the screenshot has bag placement but no footprint", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        round: 1,
+        gold: 13,
+        backpackItems: [
+          { name: "Ranger Bag", location: "bag", x: 0, y: 0, groundedBpbId: 67 },
+          { name: "Wooden Sword", location: "bag", x: 1, y: 1, groundedBpbId: 1 },
+          { name: "Lucky Clover", location: "bag", x: 1, y: 2 },
+        ],
+        shopItems: [
+          { name: "Stone", slot: "top-right", sale: false, price: 1 },
+          { name: "Banana", slot: "middle-left", sale: false, price: 3 },
+          { name: "Shiny Shell", slot: "middle-right", sale: true, price: 1 },
+          { name: "Broom", slot: "bottom-center", sale: false, price: 4 },
+          { name: "Walrus Tusk", slot: "bottom-right", sale: false, price: 4 },
+        ],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.layoutConfidence).toBe("considered");
+    expect(recommendation.placementAdvice.join(" ")).toContain("Known bag space was considered");
+    expect(recommendation.placementAdvice.join(" ")).not.toContain("Ranger Bag footprint is unknown");
+    expect(recommendation.layoutOptions[0].cells.length).toBeGreaterThan(0);
+    expect(recommendation.layoutOptions[0].cells.every((cell) => cell.x >= 0 && cell.x <= 1 && cell.y >= 0 && cell.y <= 2)).toBe(
+      true,
+    );
+  });
+
   it("explains when known bag space was considered for placement", () => {
     const recommendation = recommendNextAction({
       gameState: baseState({
@@ -231,7 +289,7 @@ describe("recommendNextAction", () => {
     expect(recommendation.layoutOptions[0].cells.every((cell) => cell.x <= 2 && cell.y <= 1)).toBe(true);
   });
 
-  it("asks for bag confirmation instead of exact layouts when bag shape is missing", () => {
+  it("uses BPB cache shape instead of asking for bag shape confirmation", () => {
     const recommendation = recommendNextAction({
       gameState: baseState({
         round: 1,
@@ -249,9 +307,32 @@ describe("recommendNextAction", () => {
       correctionPromptsUsed: [],
     });
 
+    expect(recommendation.layoutConfidence).toBe("considered");
+    expect(recommendation.layoutOptions.length).toBeGreaterThan(0);
+    expect(recommendation.placementAdvice.join(" ")).not.toContain("Ranger Bag footprint is unknown");
+  });
+
+  it("asks for bag confirmation when cache shape data is unavailable", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        round: 1,
+        gold: 8,
+        backpackItems: [
+          { name: "Ranger Bag", location: "bag", itemKind: "bag", x: 0, y: 0 },
+          { name: "Wooden Sword", location: "bag", x: 1, y: 1 },
+        ],
+        shopItems: [
+          { name: "Stone", slot: "top-right", sale: false, price: 1 },
+          { name: "Broom", slot: "bottom-center", sale: false, price: 4 },
+        ],
+      }),
+      bpbCache: null,
+      correctionPromptsUsed: [],
+    });
+
     expect(recommendation.layoutConfidence).toBe("needs-confirmation");
     expect(recommendation.layoutOptions).toEqual([]);
-    expect(recommendation.placementAdvice.join(" ")).toContain("Confirm bag placement and bag shape");
+    expect(recommendation.placementAdvice.join(" ")).toContain("Ranger Bag footprint is unknown");
   });
 
   it("does not recommend buying a sale item the player cannot afford", () => {

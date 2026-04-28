@@ -34,6 +34,8 @@ const TEMPO_WEAPON_CELLS: PlannedCell[] = [
   { item: "Lucky Clover", x: 0, y: 1, width: 1, height: 1, role: "luck support" },
 ];
 
+const PREFERRED_CELL_BY_ITEM = new Map(TEMPO_WEAPON_CELLS.map((cell) => [cell.item, cell]));
+
 const STAMINA_SAFE_CELLS: PlannedCell[] = [
   { item: "Wooden Sword", x: 1, y: 1, width: 1, height: 1, role: "primary weapon" },
   { item: "Broom", x: 2, y: 1, width: 1, height: 1, role: "second weapon" },
@@ -44,25 +46,70 @@ const STAMINA_SAFE_CELLS: PlannedCell[] = [
   { item: "Walrus Tusk", x: 3, y: 1, width: 1, height: 1, role: "damage utility" },
 ];
 
+const ROLE_BY_ITEM = new Map(
+  [...TEMPO_WEAPON_CELLS, ...STAMINA_SAFE_CELLS].map((cell) => [cell.item, cell.role] as const),
+);
+
 function relevantNames(gameState: GameState, targetItems: string[]): Set<string> {
   return new Set([
-    ...gameState.backpackItems.filter((item) => item.location === "bag").map((item) => item.name),
+    ...gameState.backpackItems
+      .filter((item) => item.location === "bag" && !isBagItem(item, gameState))
+      .map((item) => item.name),
     ...targetItems,
   ]);
 }
 
-function cellsForRelevantItems(cells: PlannedCell[], names: Set<string>, board: BagAwareBoard): PlannedCell[] {
-  return cells.filter((cell) => {
-    if (!names.has(cell.item)) {
-      return false;
+function cellKey(cell: { x: number; y: number }): string {
+  return `${cell.x},${cell.y}`;
+}
+
+function activeCellsByReadingOrder(board: BagAwareBoard): { x: number; y: number }[] {
+  return [...board.activeBagCells].sort((left, right) => left.y - right.y || left.x - right.x);
+}
+
+function plannedCellFor(item: string, coordinate: { x: number; y: number }): PlannedCell {
+  return {
+    item,
+    x: coordinate.x,
+    y: coordinate.y,
+    width: 1,
+    height: 1,
+    ...(ROLE_BY_ITEM.get(item) ? { role: ROLE_BY_ITEM.get(item) } : {}),
+  };
+}
+
+function cellsForPriority(items: string[], names: Set<string>, board: BagAwareBoard, gameState: GameState): PlannedCell[] {
+  const activeCells = activeCellsByReadingOrder(board);
+  const freeCells = new Map(activeCells.map((cell) => [cellKey(cell), cell]));
+  const cells: PlannedCell[] = [];
+
+  for (const itemName of items) {
+    if (!names.has(itemName) || freeCells.size === 0) {
+      continue;
     }
 
-    if (board.activeBagCells.length === 0) {
-      return true;
+    const current = gameState.backpackItems.find((item) => item.name === itemName);
+    const currentCoordinate =
+      current?.x !== undefined && current.y !== undefined ? { x: current.x, y: current.y } : undefined;
+    const preferred = PREFERRED_CELL_BY_ITEM.get(itemName);
+    const candidate =
+      currentCoordinate &&
+      isCellInsideKnownBagSpace(currentCoordinate, board) &&
+      freeCells.has(cellKey(currentCoordinate))
+        ? currentCoordinate
+        : preferred && isCellInsideKnownBagSpace(preferred, board) && freeCells.has(cellKey(preferred))
+          ? preferred
+          : freeCells.values().next().value;
+
+    if (!candidate) {
+      continue;
     }
 
-    return isCellInsideKnownBagSpace(cell, board);
-  });
+    cells.push(plannedCellFor(itemName, candidate));
+    freeCells.delete(cellKey(candidate));
+  }
+
+  return cells;
 }
 
 function targetAction(cell: PlannedCell): string {
@@ -139,8 +186,10 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
     };
   }
 
-  const tempoCells = cellsForRelevantItems(TEMPO_WEAPON_CELLS, names, board);
-  const staminaCells = cellsForRelevantItems(STAMINA_SAFE_CELLS, names, board);
+  const tempoPriority = ["Wooden Sword", "Broom", "Stone", "Banana", "Lucky Clover", "Shiny Shell", "Walrus Tusk"];
+  const staminaPriority = ["Wooden Sword", "Banana", "Broom", "Stone", "Lucky Clover", "Shiny Shell", "Walrus Tusk"];
+  const tempoCells = cellsForPriority(tempoPriority, names, board, input.gameState);
+  const staminaCells = cellsForPriority(staminaPriority, names, board, input.gameState);
 
   if (tempoCells.length === 0 && staminaCells.length === 0) {
     return {
@@ -162,8 +211,11 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
     layoutConfidence === "considered"
       ? [
           "Known bag space was considered when generating these options.",
+          ...(tempoCells.length < names.size
+            ? [`Known active bag space fits ${tempoCells.length} of ${names.size} relevant items; keep lower-priority pieces in storage until more bags are placed.`]
+            : []),
           ...(outsideItems.length
-            ? [`${outsideItems.map((item) => item.name).join(", ")} appear outside known active bag space; confirm storage or bag placement.`]
+            ? [`${outsideItems.map((item) => item.name).join(", ")} appears outside known active bag space; confirm storage or bag placement.`]
             : []),
           "Option 1 maximizes early weapon tempo by keeping Wooden Sword and Broom active with Stone adjacency.",
           "Option 2 protects Banana support first, then fits damage and utility pieces around the weapons.",

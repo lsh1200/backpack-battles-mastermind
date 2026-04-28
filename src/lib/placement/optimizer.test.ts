@@ -87,6 +87,43 @@ describe("optimizePlacement", () => {
     expect(plan.layoutOptions[1].tradeoffs.join(" ")).toContain("safer stamina");
   });
 
+  it("generates option cells from active bag cells instead of fixed full-board coordinates", () => {
+    const plan = optimizePlacement({
+      gameState: state({
+        backpackItems: [
+          {
+            name: "Ranger Bag",
+            location: "bag",
+            itemKind: "bag",
+            x: 0,
+            y: 0,
+            footprint: {
+              source: "local-data",
+              cells: [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 0, y: 1 },
+                { x: 1, y: 1 },
+                { x: 0, y: 2 },
+                { x: 1, y: 2 },
+              ],
+            },
+          },
+          { name: "Wooden Sword", location: "bag", x: 1, y: 1 },
+          { name: "Lucky Clover", location: "bag", x: 1, y: 2 },
+        ],
+      }),
+      targetItems,
+    });
+
+    expect(plan.layoutConfidence).toBe("considered");
+    expect(plan.layoutOptions[0].cells.map((cell) => cell.item)).toContain("Broom");
+    expect(plan.layoutOptions[0].cells.every((cell) => cell.x <= 1 && cell.y <= 2)).toBe(true);
+    expect(plan.layoutOptions[0].cells).not.toContainEqual(
+      expect.objectContaining({ item: "Broom", x: 2, y: 1 }),
+    );
+  });
+
   it("derives active cells only from a placed bag footprint", () => {
     const board = bagAwareBoard(
       state({

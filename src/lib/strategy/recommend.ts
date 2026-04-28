@@ -1,6 +1,6 @@
-import type { BpbCache } from "@/lib/bpb/schemas";
+import type { BpbCache, BpbItem } from "@/lib/bpb/schemas";
 import { findBpbItemByName } from "@/lib/bpb/store";
-import type { CandidateAction, GameState, Recommendation, ShopItem } from "@/lib/core/types";
+import type { BackpackItem, CandidateAction, GameState, Recommendation, ShopItem } from "@/lib/core/types";
 import { optimizePlacement } from "@/lib/placement/optimizer";
 import { classPlanGroundingItems, classPlans, genericClassPlans } from "./guide-notes";
 
@@ -160,6 +160,40 @@ function ungroundedItemAssumptions(gameState: GameState, bpbCache: BpbCache | nu
     .map((item) => `${item.name} is not grounded in the local BPB cache; avoid item-specific claims until confirmed.`);
 }
 
+function footprintCellsFromShape(shape: BpbItem["shape"]): NonNullable<BackpackItem["footprint"]>["cells"] {
+  return (shape ?? []).flatMap((row, y) =>
+    row.flatMap((value, x) => (value > 0 ? [{ x, y }] : [])),
+  );
+}
+
+function withBpbPlacementMetadata(item: BackpackItem, bpbCache: BpbCache | null): BackpackItem {
+  const bpbItem = bpbCache ? findBpbItemByName(bpbCache, item.name) : undefined;
+  if (!bpbItem?.grounded) {
+    return item;
+  }
+
+  const footprintCells = item.footprint ? [] : footprintCellsFromShape(bpbItem.shape);
+  const itemKind = item.itemKind ?? (bpbItem.type === "Bag" ? "bag" : undefined);
+
+  return {
+    ...item,
+    ...(itemKind ? { itemKind } : {}),
+    ...(item.footprint
+      ? {}
+      : footprintCells.length > 0
+        ? { footprint: { source: "local-data" as const, cells: footprintCells } }
+        : {}),
+  };
+}
+
+function gameStateWithBpbPlacementMetadata(gameState: GameState, bpbCache: BpbCache | null): GameState {
+  return {
+    ...gameState,
+    backpackItems: gameState.backpackItems.map((item) => withBpbPlacementMetadata(item, bpbCache)),
+    storageItems: gameState.storageItems.map((item) => withBpbPlacementMetadata(item, bpbCache)),
+  };
+}
+
 export function recommendNextAction(input: RecommendInput): Recommendation {
   const { gameState, bpbCache, correctionPromptsUsed, itemRecognitionSource } = input;
   const assumptionsMade = ungroundedItemAssumptions(gameState, bpbCache);
@@ -187,7 +221,8 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
   const itemRecognitionPolicy = recognitionPolicy(assumptionsMade, itemRecognitionSource);
 
   if (earlyPackageAction) {
-    const placementPlan = optimizePlacement({ gameState, targetItems: earlyPackageAction.targetItems });
+    const placementState = gameStateWithBpbPlacementMetadata(gameState, bpbCache);
+    const placementPlan = optimizePlacement({ gameState: placementState, targetItems: earlyPackageAction.targetItems });
 
     return {
       bestAction: earlyPackageAction.action,
@@ -206,7 +241,8 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
     (item) => item.sale && canAfford(item, gameState.gold) && hasGroundedItem(bpbCache, item.name),
   );
   if (saleItem) {
-    const placementPlan = optimizePlacement({ gameState, targetItems: [saleItem.name] });
+    const placementState = gameStateWithBpbPlacementMetadata(gameState, bpbCache);
+    const placementPlan = optimizePlacement({ gameState: placementState, targetItems: [saleItem.name] });
 
     return {
       bestAction: buyAction(
@@ -226,7 +262,8 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
   }
 
   if ((gameState.round ?? 1) <= 3 && (gameState.gold ?? 0) <= 2 && gameState.shopItems.length === 0) {
-    const placementPlan = optimizePlacement({ gameState, targetItems: [] });
+    const placementState = gameStateWithBpbPlacementMetadata(gameState, bpbCache);
+    const placementPlan = optimizePlacement({ gameState: placementState, targetItems: [] });
 
     return {
       bestAction: {
@@ -248,7 +285,8 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
     };
   }
 
-  const placementPlan = optimizePlacement({ gameState, targetItems: [] });
+  const placementState = gameStateWithBpbPlacementMetadata(gameState, bpbCache);
+  const placementPlan = optimizePlacement({ gameState: placementState, targetItems: [] });
 
   return {
     bestAction: {
