@@ -1,0 +1,296 @@
+{
+  "gameState": {
+    "round": 1,
+    "gold": 13,
+    "lives": 5,
+    "wins": 0,
+    "className": "Ranger",
+    "bagChoice": "Ranger Bag",
+    "skills": [],
+    "subclass": null,
+    "shopItems": [
+      {
+        "name": "Stone",
+        "slot": "top-right",
+        "sale": false,
+        "price": 1,
+        "groundedBpbId": 0
+      },
+      {
+        "name": "Banana",
+        "slot": "middle-left",
+        "sale": false,
+        "price": 3,
+        "groundedBpbId": 5
+      },
+      {
+        "name": "Shiny Shell",
+        "slot": "middle-right",
+        "sale": true,
+        "price": 1,
+        "groundedBpbId": 275
+      },
+      {
+        "name": "Broom",
+        "slot": "bottom-left",
+        "sale": true,
+        "price": 2,
+        "groundedBpbId": 3
+      },
+      {
+        "name": "Walrus Tusk",
+        "slot": "bottom-right",
+        "sale": false,
+        "price": 4,
+        "groundedBpbId": 8
+      }
+    ],
+    "backpackItems": [
+      {
+        "name": "Ranger Bag",
+        "location": "bag",
+        "x": 0,
+        "y": 0,
+        "groundedBpbId": 67
+      },
+      {
+        "name": "Wooden Sword",
+        "location": "bag",
+        "x": 1,
+        "y": 1,
+        "groundedBpbId": 1
+      },
+      {
+        "name": "Lucky Clover",
+        "location": "bag",
+        "x": 2,
+        "y": 2,
+        "groundedBpbId": 24
+      }
+    ],
+    "storageItems": [],
+    "userGoal": "learn",
+    "uncertainFields": []
+  },
+  "validation": {
+    "image": {
+      "width": 1280,
+      "height": 591,
+      "orientation": "landscape"
+    },
+    "regions": [
+      {
+        "name": "shop",
+        "x": 25.6,
+        "y": 47.28,
+        "width": 435.20000000000005,
+        "height": 425.52
+      },
+      {
+        "name": "backpack",
+        "x": 486.4,
+        "y": 47.28,
+        "width": 537.6,
+        "height": 484.61999999999995
+      },
+      {
+        "name": "status",
+        "x": 1024,
+        "y": 11.82,
+        "width": 230.39999999999998,
+        "height": 106.38
+      }
+    ],
+    "warnings": [
+      "Screenshot is small; item text and icons may be hard to read."
+    ],
+    "requiresConfirmation": []
+  },
+  "correctionQuestions": [],
+  "recommendation": {
+    "bestAction": {
+      "type": "buy",
+      "target": "Broom, Banana, Stone, Shiny Shell, Walrus Tusk",
+      "value": 95,
+      "risks": [
+        "Check backpack space before buying every piece; put extras in storage if needed."
+      ],
+      "assumptions": [],
+      "teachingReason": "Buy Broom, Banana, Stone, Shiny Shell, Walrus Tusk: this round-one shopping sequence uses 11 of your 13 gold to add a second weapon, stamina support, and cheap tempo pieces."
+    },
+    "shortReason": "Buy this shopping sequence now: Broom, Banana, Stone, Shiny Shell, Walrus Tusk. It spends your early gold on grounded tempo instead of over-rolling.",
+    "rejectedAlternatives": [],
+    "planSupported": "Beginner Ranger should keep a simple tempo plan, watch stamina, and pivot only after grounded signpost items appear.",
+    "placementAdvice": [
+      "Current bag coordinates were considered when generating these options.",
+      "Option 1 maximizes early weapon tempo by keeping Wooden Sword and Broom active with Stone adjacency.",
+      "Option 2 protects Banana support first, then fits damage and utility pieces around the weapons."
+    ],
+    "layoutConfidence": "considered",
+    "recognitionPolicy": {
+      "itemRecognition": "user-confirmed",
+      "summary": "Item names came from user-confirmed correction data and were grounded against the local BPB cache before recommendation.",
+      "warnings": []
+    },
+    "layoutOptions": [
+      {
+        "id": "tempo-weapons",
+        "title": "Tempo Weapons",
+        "score": 92,
+        "summary": "Best when you want immediate round-one damage: two active weapons, Stone touching a weapon, Banana fitted after.",
+        "moves": [
+          "Keep Wooden Sword at (1, 1).",
+          "Place Broom at (2, 1) as your second active weapon.",
+          "Place Stone at (1, 0) touching Wooden Sword or Broom.",
+          "Place Banana at (0, 2) for stamina support without blocking weapons.",
+          "Place Shiny Shell at (3, 0).",
+          "Place Walrus Tusk at (3, 1).",
+          "Move Lucky Clover from (2, 2) to (0, 1)."
+        ],
+        "tradeoffs": [
+          "Less flexible utility space because damage pieces get first claim on the board."
+        ],
+        "cells": [
+          {
+            "item": "Wooden Sword",
+            "x": 1,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "role": "primary weapon"
+          },
+          {
+            "item": "Broom",
+            "x": 2,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "role": "second weapon"
+          },
+          {
+            "item": "Stone",
+            "x": 1,
+            "y": 0,
+            "width": 1,
+            "height": 1,
+            "role": "weapon damage adjacency"
+          },
+          {
+            "item": "Banana",
+            "x": 0,
+            "y": 2,
+            "width": 1,
+            "height": 1,
+            "role": "stamina support"
+          },
+          {
+            "item": "Shiny Shell",
+            "x": 3,
+            "y": 0,
+            "width": 1,
+            "height": 1,
+            "role": "cheap utility"
+          },
+          {
+            "item": "Walrus Tusk",
+            "x": 3,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "role": "damage utility"
+          },
+          {
+            "item": "Lucky Clover",
+            "x": 0,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "role": "luck support"
+          }
+        ]
+      },
+      {
+        "id": "stamina-safe",
+        "title": "Stamina Safe",
+        "score": 86,
+        "summary": "Best when you are worried about stamina/space: Banana is protected first, then damage pieces fit around it.",
+        "moves": [
+          "Keep Wooden Sword at (1, 1).",
+          "Place Broom at (2, 1) as your second active weapon.",
+          "Place Banana at (1, 2) for stamina support without blocking weapons.",
+          "Place Stone at (2, 0) touching Wooden Sword or Broom.",
+          "Move Lucky Clover from (2, 2) to (0, 1).",
+          "Place Shiny Shell at (0, 2).",
+          "Place Walrus Tusk at (3, 1)."
+        ],
+        "tradeoffs": [
+          "Slightly safer stamina support, but less aggressive than the tempo weapon layout."
+        ],
+        "cells": [
+          {
+            "item": "Wooden Sword",
+            "x": 1,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "role": "primary weapon"
+          },
+          {
+            "item": "Broom",
+            "x": 2,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "role": "second weapon"
+          },
+          {
+            "item": "Banana",
+            "x": 1,
+            "y": 2,
+            "width": 1,
+            "height": 1,
+            "role": "protected stamina support"
+          },
+          {
+            "item": "Stone",
+            "x": 2,
+            "y": 0,
+            "width": 1,
+            "height": 1,
+            "role": "weapon damage adjacency"
+          },
+          {
+            "item": "Lucky Clover",
+            "x": 0,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "role": "luck support"
+          },
+          {
+            "item": "Shiny Shell",
+            "x": 0,
+            "y": 2,
+            "width": 1,
+            "height": 1,
+            "role": "cheap utility"
+          },
+          {
+            "item": "Walrus Tusk",
+            "x": 3,
+            "y": 1,
+            "width": 1,
+            "height": 1,
+            "role": "damage utility"
+          }
+        ]
+      }
+    ],
+    "nextTargets": [
+      "After placement is stable, start battle.",
+      "Next shop, look for Hero Sword and Whetstone lines."
+    ],
+    "assumptionsMade": [],
+    "correctionPromptsUsed": []
+  }
+}
