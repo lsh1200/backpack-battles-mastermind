@@ -471,7 +471,7 @@ function mergeBackpackItems(
     return visionItems;
   }
 
-  return recognizedItems.flatMap((recognized, index) => {
+  const mergedRecognizedItems = recognizedItems.flatMap((recognized, index) => {
     const visionItem = visionItems[index];
     if (!acceptedFields.has(`backpackItems.${index}.name`)) {
       return visionItem ? [visionItem] : [];
@@ -484,6 +484,8 @@ function mergeBackpackItems(
       ...(visionItem?.y !== undefined && recognized.y === undefined ? { y: visionItem.y } : {}),
     }];
   });
+
+  return [...mergedRecognizedItems, ...visionItems.slice(recognizedItems.length)];
 }
 
 function fieldExistsInGameState(gameState: GameState, field: string): boolean {
@@ -496,6 +498,23 @@ function fieldExistsInGameState(gameState: GameState, field: string): boolean {
   const index = Number(indexText);
 
   return collection === "shopItems" ? index < gameState.shopItems.length : index < gameState.backpackItems.length;
+}
+
+function shouldKeepReportedUncertainty(gameState: GameState, field: string): boolean {
+  if (gameState.uncertainFields.includes(field)) {
+    return true;
+  }
+
+  const match = field.match(/^(shopItems|backpackItems)\.(\d+)\.name$/);
+  if (!match) {
+    return true;
+  }
+
+  const [, collection, indexText] = match;
+  const index = Number(indexText);
+  const item = collection === "shopItems" ? gameState.shopItems[index] : gameState.backpackItems[index];
+
+  return item?.name === undefined || item.name === "Unknown Item";
 }
 
 export function applyItemRecognitionToGameState(gameState: GameState, report: ItemRecognitionReport | null): GameState {
@@ -514,7 +533,7 @@ export function applyItemRecognitionToGameState(gameState: GameState, report: It
     ...mergedState,
     uncertainFields: uniqueStrings([
       ...gameState.uncertainFields.filter((field) => !recognizedFields.has(field)),
-      ...report.uncertainFields,
+      ...report.uncertainFields.filter((field) => shouldKeepReportedUncertainty(mergedState, field)),
     ]).filter((field) => fieldExistsInGameState(mergedState, field)),
   };
 }

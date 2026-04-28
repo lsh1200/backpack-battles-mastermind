@@ -249,7 +249,7 @@ describe("deterministic item recognizer", () => {
     expect(merged.uncertainFields).toEqual([]);
   });
 
-  it("preserves vision item names when local template matching is uncertain", async () => {
+  it("does not re-question audited item names when local template matching is uncertain", async () => {
     const report = await recognizeItemsFromScreenshot({
       image: await screenshotWithSquare("#1f78d1"),
       bpbCache: await cache(),
@@ -265,6 +265,31 @@ describe("deterministic item recognizer", () => {
     expect(merged.shopItems).toEqual([
       {
         name: "Customer Card",
+        slot: "shop-1",
+        sale: true,
+        price: 4,
+      },
+    ]);
+    expect(merged.uncertainFields).toEqual([]);
+  });
+
+  it("preserves explicit audited uncertainty for weak local matches", async () => {
+    const report = await recognizeItemsFromScreenshot({
+      image: await screenshotWithSquare("#1f78d1"),
+      bpbCache: await cache(),
+      profile,
+    });
+    const merged = applyItemRecognitionToGameState(
+      baseGameState({
+        shopItems: [{ name: "Unknown Item", slot: "shop-1", sale: true, price: 4 }],
+        uncertainFields: ["shopItems.0.name"],
+      }),
+      report,
+    );
+
+    expect(merged.shopItems).toEqual([
+      {
+        name: "Unknown Item",
         slot: "shop-1",
         sale: true,
         price: 4,
@@ -311,6 +336,55 @@ describe("deterministic item recognizer", () => {
     );
 
     expect(merged.backpackItems).toEqual([{ name: "Lucky Clover", location: "bag", x: 2, y: 2 }]);
-    expect(merged.uncertainFields).toEqual(["backpackItems.0.name"]);
+    expect(merged.uncertainFields).toEqual([]);
+  });
+
+  it("preserves extra audited backpack items beyond uncertain deterministic slots", () => {
+    const report: ItemRecognitionReport = {
+      source: "mixed",
+      shopItems: [],
+      backpackItems: [
+        { name: "Unknown Item", location: "bag", x: 0, y: 0 },
+        { name: "Unknown Item", location: "bag", x: 1, y: 0 },
+      ],
+      uncertainFields: ["backpackItems.0.name", "backpackItems.1.name"],
+      warnings: ["local template confidence is low."],
+      candidateOptionsByField: {},
+      matches: [
+        {
+          region: "backpack",
+          slot: "grid-0-0",
+          field: "backpackItems.0.name",
+          crop: { x: 0, y: 0, width: 10, height: 10 },
+          accepted: false,
+          candidates: [],
+        },
+        {
+          region: "backpack",
+          slot: "grid-1-0",
+          field: "backpackItems.1.name",
+          crop: { x: 10, y: 0, width: 10, height: 10 },
+          accepted: false,
+          candidates: [],
+        },
+      ],
+    };
+    const merged = applyItemRecognitionToGameState(
+      baseGameState({
+        backpackItems: [
+          { name: "Broccoli", location: "bag", x: 0, y: 0 },
+          { name: "Banana", location: "bag", x: 1, y: 0 },
+          { name: "Mana Orb", location: "bag", x: 4, y: 3 },
+        ],
+      }),
+      report,
+    );
+
+    expect(merged.backpackItems).toEqual([
+      { name: "Broccoli", location: "bag", x: 0, y: 0 },
+      { name: "Banana", location: "bag", x: 1, y: 0 },
+      { name: "Mana Orb", location: "bag", x: 4, y: 3 },
+    ]);
+    expect(merged.uncertainFields).toEqual([]);
   });
 });
