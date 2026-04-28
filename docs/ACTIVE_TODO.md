@@ -105,7 +105,7 @@ Acceptance Checklist:
 
 Verification Evidence:
 
-- Commit: `b45675e feat: add bag-aware board model`
+- Commit: `5d1ab11 feat: add bag-aware board model`
 - RED targeted tests failed as expected before implementation: missing bag schema fields/helpers and old optimizer behavior.
 - Added regression coverage that analysis grounding preserves bag metadata.
 - `npm.cmd run test -- src/lib/core/schemas.test.ts src/lib/placement/optimizer.test.ts src/lib/strategy/recommend.test.ts src/components/RecommendationPanel.test.tsx` passed: 4 files, 30 tests.
