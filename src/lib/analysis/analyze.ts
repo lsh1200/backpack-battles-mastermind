@@ -13,8 +13,64 @@ type AnalyzeCorrectedStateInput = {
   candidateOptionsByField?: Record<string, string[]>;
 };
 
+const RANGER_STARTER_GRID_ORIGIN = { x: 0, y: 2 };
+
 function knownGroundedItemNames(bpbCache: BpbCache | null): string[] {
   return bpbCache?.items.filter((item) => item.grounded).map((item) => item.name) ?? [];
+}
+
+function hasDetectedInventoryGrid(validation: ValidationReport): boolean {
+  return validation.regions.some(
+    (region) =>
+      region.name === "inventoryGrid" &&
+      region.columns === 9 &&
+      region.rows === 7 &&
+      region.cellWidth !== undefined &&
+      region.cellHeight !== undefined,
+  );
+}
+
+function isClusterLocalRangerStarter(gameState: GameState, validation: ValidationReport): boolean {
+  if (!hasDetectedInventoryGrid(validation)) {
+    return false;
+  }
+
+  if (gameState.className !== "Ranger" || gameState.bagChoice !== "Ranger Bag") {
+    return false;
+  }
+
+  const rangerBag = gameState.backpackItems.find((item) => item.name === "Ranger Bag" && item.location === "bag");
+  if (rangerBag?.x !== 0 || rangerBag.y !== 0) {
+    return false;
+  }
+
+  const hasLeatherBag = gameState.backpackItems.some((item) => item.name === "Leather Bag" && item.location === "bag");
+  const positionedItems = gameState.backpackItems.filter(
+    (item) => item.location === "bag" && item.itemKind !== "bag" && item.x !== undefined && item.y !== undefined,
+  );
+
+  return !hasLeatherBag && positionedItems.every((item) => (item.x ?? 0) <= 1 && (item.y ?? 0) <= 2);
+}
+
+function normalizeBackpackCoordinatesToInventoryGrid(gameState: GameState, validation: ValidationReport): GameState {
+  if (!isClusterLocalRangerStarter(gameState, validation)) {
+    return gameState;
+  }
+
+  return {
+    ...gameState,
+    backpackItems: gameState.backpackItems.map((item) => {
+      if (item.location !== "bag" || item.x === undefined || item.y === undefined) {
+        return item;
+      }
+
+      return {
+        ...item,
+        x: item.x + RANGER_STARTER_GRID_ORIGIN.x,
+        y: item.y + RANGER_STARTER_GRID_ORIGIN.y,
+      };
+    }),
+  };
 }
 
 function groundedItemId(bpbCache: BpbCache | null, name: string): number | undefined {
@@ -63,8 +119,9 @@ function groundGameState(gameState: GameState, bpbCache: BpbCache | null): GameS
 
 export async function analyzeCorrectedState(input: AnalyzeCorrectedStateInput): Promise<AnalysisResult> {
   const { gameState, validation, bpbCache, correctionPromptsUsed } = input;
+  const gridCoordinateState = normalizeBackpackCoordinatesToInventoryGrid(gameState, validation);
   const correctionQuestions = buildCorrectionQuestions(
-    gameState,
+    gridCoordinateState,
     validation,
     knownGroundedItemNames(bpbCache),
     input.candidateOptionsByField,
@@ -72,14 +129,14 @@ export async function analyzeCorrectedState(input: AnalyzeCorrectedStateInput): 
 
   if (correctionQuestions.length > 0) {
     return {
-      gameState,
+      gameState: gridCoordinateState,
       validation,
       correctionQuestions,
       recommendation: null,
     };
   }
 
-  const groundedState = groundGameState(gameState, bpbCache);
+  const groundedState = groundGameState(gridCoordinateState, bpbCache);
 
   return {
     gameState: groundedState,

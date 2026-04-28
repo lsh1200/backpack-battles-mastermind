@@ -4,7 +4,7 @@ import sharp from "sharp";
 import { analyzeCorrectedState } from "@/lib/analysis/analyze";
 import { readBpbCache } from "@/lib/bpb/store";
 import { AnalysisResultSchema } from "@/lib/core/schemas";
-import type { AnalysisResult } from "@/lib/core/types";
+import type { AnalysisResult, ValidationReport } from "@/lib/core/types";
 import { codexHandoffCropUrl } from "@/lib/codex-handoff/client";
 import { createCodexHandoff, readCodexHandoff, readCodexHandoffResult } from "@/lib/codex-handoff/store";
 import type { CodexHandoff } from "@/lib/codex-handoff/schemas";
@@ -77,6 +77,23 @@ function withCropUrls(result: AnalysisResult, handoffId: string, handoff: CodexH
       cropFields.has(question.field) ? { ...question, imageUrl: codexHandoffCropUrl(handoffId, question.field) } : question,
     ),
   };
+}
+
+function hasInventoryGrid(validation: ValidationReport): boolean {
+  return validation.regions.some((region) => region.name === "inventoryGrid" && region.columns === 9 && region.rows === 7);
+}
+
+async function validationWithInventoryGrid(handoff: CodexHandoff): Promise<ValidationReport> {
+  if (hasInventoryGrid(handoff.validation)) {
+    return handoff.validation;
+  }
+
+  const detectedValidation = await validateScreenshotPixels(await readFile(handoff.screenshotPath));
+  const inventoryGrid = detectedValidation.regions.find((region) => region.name === "inventoryGrid");
+
+  return inventoryGrid
+    ? { ...handoff.validation, regions: [...handoff.validation.regions, inventoryGrid] }
+    : handoff.validation;
 }
 
 export async function POST(request: Request) {
@@ -167,13 +184,14 @@ export async function GET(request: Request) {
 
     const handoffResult = await readCodexHandoffResult(handoffId);
     const prompt = await readFile(handoff.promptPath, "utf8");
+    const validation = await validationWithInventoryGrid(handoff);
     const handoffMetadata = {
       handoffId,
       prompt,
       promptPath: handoff.promptPath,
       resultPath: handoff.resultPath,
       screenshotPath: handoff.screenshotPath,
-      validation: handoff.validation,
+      validation,
     };
 
     if (handoffResult.status === "pending") {
@@ -187,7 +205,7 @@ export async function GET(request: Request) {
     const result = AnalysisResultSchema.parse(
       await analyzeCorrectedState({
         gameState: applyItemRecognitionToGameState(handoffResult.gameState, handoff.itemRecognitionReport ?? null),
-        validation: handoff.validation,
+        validation,
         bpbCache,
         correctionPromptsUsed: ["codex-test-mode"],
         itemRecognitionSource: handoff.itemRecognitionReport?.source ?? "llm-fallback",

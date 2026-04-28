@@ -272,7 +272,7 @@ describe("recommendNextAction", () => {
 
     expect(recommendation.layoutConfidence).toBe("considered");
     expect(recommendation.layoutOptions[0].boardCells).toHaveLength(14);
-    expect(recommendation.layoutOptions[0].moves).toContain("Keep Wooden Sword at (3, 3).");
+    expect(recommendation.layoutOptions[0].moves).toContain("Keep Wooden Sword at (3, 1).");
   });
 
   it("uses BPB bag shape data when the screenshot has bag placement but no footprint", () => {
@@ -303,47 +303,13 @@ describe("recommendNextAction", () => {
     expect(recommendation.layoutOptions[0].cells.length).toBeGreaterThan(0);
     expect(recommendation.layoutOptions[0].boardCells).toHaveLength(14);
     expect(recommendation.layoutOptions[0].boardCells).toEqual(
-      expect.arrayContaining([{ x: 0, y: 3 }, { x: 3, y: 4 }, { x: 5, y: 4 }]),
+      expect.arrayContaining([{ x: 0, y: 1 }, { x: 3, y: 2 }, { x: 5, y: 2 }]),
     );
     expect(recommendation.layoutOptions[0].cells).toContainEqual(
       expect.objectContaining({ item: "Wooden Sword", width: 1, height: 2, shape: [[1], [1]] }),
     );
     expect(recommendation.layoutOptions[0].cells.map((item) => item.item)).toContain("Banana");
     expect(recommendation.layoutOptions[0].benchItems.map((item) => item.item)).toContain("Broom");
-  });
-
-  it("anchors the inferred Ranger starter cluster below the empty top rows of the full inventory grid", () => {
-    const recommendation = recommendNextAction({
-      gameState: baseState({
-        round: 1,
-        gold: 13,
-        backpackItems: [
-          { name: "Ranger Bag", location: "bag", x: 0, y: 0, groundedBpbId: 67 },
-          { name: "Wooden Sword", location: "bag", x: 1, y: 1, groundedBpbId: 1 },
-          { name: "Lucky Clover", location: "bag", x: 1, y: 2 },
-        ],
-        shopItems: [
-          { name: "Stone", slot: "top-right", sale: false, price: 1 },
-          { name: "Banana", slot: "middle-left", sale: false, price: 3 },
-          { name: "Shiny Shell", slot: "middle-right", sale: true, price: 1 },
-        ],
-      }),
-      bpbCache,
-      correctionPromptsUsed: [],
-    });
-
-    const option = recommendation.layoutOptions[0];
-
-    expect(option.boardDimensions).toEqual({ width: 9, height: 7 });
-    expect(option.bags).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ item: "Leather Bag", x: 0, y: 3, width: 2, height: 2 }),
-        expect.objectContaining({ item: "Ranger Bag", x: 2, y: 2, width: 2, height: 3 }),
-        expect.objectContaining({ item: "Leather Bag", x: 4, y: 3, width: 2, height: 2 }),
-      ]),
-    );
-    expect(option.boardCells.some((cell) => cell.y < 2)).toBe(false);
-    expect(option.moves).toContain("Keep Wooden Sword at (3, 3).");
   });
 
   it("explains when known bag space was considered for placement", () => {
@@ -382,7 +348,7 @@ describe("recommendNextAction", () => {
     expect(recommendation.placementAdvice.join(" ")).toContain("Known bag space was considered");
     expect(recommendation.layoutOptions[0].boardCells).toHaveLength(14);
     expect(recommendation.layoutOptions[0].boardCells).toEqual(
-      expect.arrayContaining([{ x: 0, y: 3 }, { x: 3, y: 4 }, { x: 5, y: 4 }]),
+      expect.arrayContaining([{ x: 0, y: 1 }, { x: 3, y: 2 }, { x: 5, y: 2 }]),
     );
   });
 

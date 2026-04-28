@@ -27,6 +27,49 @@ const cache: BpbCache = {
       tags: [],
     },
     {
+      id: 1,
+      name: "Wooden Sword",
+      aliases: ["wooden sword", "woodensword"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/WoodenSword.webp",
+      grounded: true,
+      type: "Melee Weapon",
+      shape: [[1], [1]],
+      gridWidth: 1,
+      gridHeight: 2,
+      tags: [],
+    },
+    {
+      id: 11,
+      name: "Leather Bag",
+      aliases: ["leather bag", "leatherbag"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/LeatherBag.webp",
+      grounded: true,
+      type: "Bag",
+      shape: [
+        [1, 1],
+        [1, 1],
+      ],
+      gridWidth: 2,
+      gridHeight: 2,
+      tags: [],
+    },
+    {
+      id: 67,
+      name: "Ranger Bag",
+      aliases: ["ranger bag", "rangerbag"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/RangerBag.webp",
+      grounded: true,
+      type: "Bag",
+      shape: [
+        [1, 1],
+        [1, 1],
+        [1, 1],
+      ],
+      gridWidth: 2,
+      gridHeight: 3,
+      tags: [],
+    },
+    {
       id: 999,
       name: "Mystery Blade",
       aliases: ["mystery blade"],
@@ -42,6 +85,24 @@ const validation: ValidationReport = {
   regions: [],
   warnings: [],
   requiresConfirmation: [],
+};
+
+const inventoryGridValidation: ValidationReport = {
+  ...validation,
+  regions: [
+    {
+      name: "inventoryGrid",
+      x: 8,
+      y: 10,
+      width: 126,
+      height: 98,
+      columns: 9,
+      rows: 7,
+      cellWidth: 14,
+      cellHeight: 14,
+      source: "detected-grid",
+    },
+  ],
 };
 
 function baseGameState(overrides: Partial<GameState>): GameState {
@@ -154,5 +215,35 @@ describe("analysis orchestrator", () => {
 
     expect(result.recommendation?.recognitionPolicy.itemRecognition).toBe("llm-fallback");
     expect(result.recommendation?.recognitionPolicy.summary).toContain("LLM fallback");
+  });
+
+  it("normalizes cluster-local Ranger handoff coordinates into full inventory grid coordinates", async () => {
+    const result = await analyzeCorrectedState({
+      gameState: baseGameState({
+        bagChoice: "Ranger Bag",
+        backpackItems: [
+          { name: "Ranger Bag", location: "bag", itemKind: "bag", x: 0, y: 0 },
+          { name: "Wooden Sword", location: "bag", x: 1, y: 1 },
+        ],
+      }),
+      validation: inventoryGridValidation,
+      bpbCache: cache,
+      correctionPromptsUsed: ["codex-test-mode"],
+      itemRecognitionSource: "llm-fallback",
+    });
+
+    expect(result.gameState.backpackItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "Ranger Bag", x: 0, y: 2 }),
+        expect.objectContaining({ name: "Wooden Sword", x: 1, y: 3 }),
+      ]),
+    );
+    expect(result.recommendation?.layoutOptions[0]?.bags).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ item: "Ranger Bag", x: 2, y: 2 }),
+        expect.objectContaining({ item: "Leather Bag", x: 0, y: 3 }),
+        expect.objectContaining({ item: "Leather Bag", x: 4, y: 3 }),
+      ]),
+    );
   });
 });

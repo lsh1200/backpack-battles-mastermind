@@ -113,6 +113,8 @@ function buildPrompt(input: {
     "Do not identify item names by raw visual guessing. The local BPB item list and user corrections are the authority for item identity.",
     "If a sprite cannot be matched to a grounded local item, use Unknown Item and add the field path to uncertainFields.",
     "Locate the Shop and Inventory labels first, then read item sprites by their positions relative to those anchors.",
+    "Backpack x/y coordinates must be full 9x7 inventory grid coordinates from the detected inventoryGrid top-left, not coordinates local to the visible bag cluster.",
+    "Cells above or around the bag cluster still count when assigning coordinates. For example, if the top two full-grid rows are black/no-bag cells, a bag cluster beginning below them starts at y=2.",
     "Sale labels and price tags are not items; attach them as sale/price metadata to the nearby item sprite.",
     ...recognitionContext,
     "If you are unsure about a field, use a plausible value and include that field path in uncertainFields.",
