@@ -34,6 +34,12 @@ const result = {
       imageUrl: "/api/codex-handoff?id=abc&asset=crop&field=shopItems.0.name",
       options: ["Stone", "Banana", "Broom"],
     },
+    {
+      field: "screenshotQuality",
+      question: "Is the screenshot clear enough to read item icons?",
+      currentValue: "Clear",
+      options: ["Clear", "Too blurry"],
+    },
   ],
   recommendation: null,
 } satisfies AnalysisResult;
@@ -49,5 +55,14 @@ describe("CorrectionPanel", () => {
     expect(markup).toContain("Current read: <strong>Stone</strong>");
     expect(markup).toContain('src="/api/codex-handoff?id=abc&amp;asset=crop&amp;field=shopItems.0.name"');
     expect(markup).toContain(">Correct</button>");
+  });
+
+  it("uses a text-only card layout when there is no crop", () => {
+    const markup = renderToStaticMarkup(
+      <CorrectionPanel result={result} corrections={{}} setCorrections={vi.fn()} onSubmit={vi.fn()} />,
+    );
+
+    expect(markup).toContain('class="correction-card text-only"');
+    expect(markup).toContain("Is the screenshot clear enough to read item icons?");
   });
 });

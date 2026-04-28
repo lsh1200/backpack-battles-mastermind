@@ -31,13 +31,14 @@ export function CorrectionPanel({ result, corrections, setCorrections, onSubmit 
       </div>
       <div className="field-stack">
         {result.correctionQuestions.map((question) => {
+          const hasCrop = Boolean(question.imageUrl);
           const options = question.currentValue && !question.options.includes(question.currentValue)
             ? [question.currentValue, ...question.options]
             : question.options;
 
           return (
-            <article className="correction-card" key={question.field}>
-              {question.imageUrl ? (
+            <article className={hasCrop ? "correction-card" : "correction-card text-only"} key={question.field}>
+              {hasCrop ? (
                 <img
                   alt={`Cropped screenshot for ${question.context ?? question.field}`}
                   className="correction-crop"

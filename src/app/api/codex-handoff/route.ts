@@ -63,7 +63,7 @@ async function cropHandoffScreenshot(handoff: CodexHandoff, field: string): Prom
   return sharp(image)
     .rotate()
     .extract({ left: crop.x, top: crop.y, width: crop.width, height: crop.height })
-    .resize(180, 180, { fit: "contain", background: { r: 5, g: 6, b: 5, alpha: 1 } })
+    .resize({ width: 220, withoutEnlargement: true })
     .png()
     .toBuffer();
 }

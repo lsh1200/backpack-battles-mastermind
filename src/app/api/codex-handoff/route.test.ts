@@ -147,6 +147,7 @@ describe("Codex handoff API", () => {
     expect(cropResponse.headers.get("content-type")).toBe("image/png");
     expect(cropMetadata.width).toBeGreaterThan(0);
     expect(cropMetadata.height).toBeGreaterThan(0);
+    expect(cropMetadata.width).toBeGreaterThan(cropMetadata.height ?? 0);
     expect(bluePixels).toBeGreaterThan(100);
 
     await writeFile(handoffPath, `${JSON.stringify(handoff, null, 2)}\n`, "utf8");
