@@ -12,14 +12,18 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const file = form.get("screenshot");
     const correctedState = form.get("correctedState");
+    const hasCorrectedState = typeof correctedState === "string" && correctedState.trim().length > 0;
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "screenshot file is required" }, { status: 400 });
     }
 
+    if (!hasCorrectedState && !process.env.OPENAI_API_KEY?.trim()) {
+      return NextResponse.json({ error: "OPENAI_API_KEY is not set" }, { status: 500 });
+    }
+
     const image = Buffer.from(await file.arrayBuffer());
     const [bpbCache, validation] = await Promise.all([readBpbCache(), validateScreenshotPixels(image)]);
-    const hasCorrectedState = typeof correctedState === "string" && correctedState.trim().length > 0;
     const itemRecognitionReport = hasCorrectedState
       ? null
       : await recognizeItemsFromScreenshot({

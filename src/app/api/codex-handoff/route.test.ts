@@ -8,6 +8,7 @@ import { GET, POST } from "./route";
 
 let tempDir: string;
 const originalHandoffDir = process.env.CODEX_HANDOFF_DIR;
+const originalRecognitionMaxTemplates = process.env.BPB_RECOGNITION_MAX_TEMPLATES;
 
 const gameState: GameState = {
   round: 1,
@@ -45,6 +46,7 @@ async function screenshotFile(): Promise<File> {
 beforeEach(async () => {
   tempDir = await mkdtemp(join(tmpdir(), "codex-handoff-api-"));
   process.env.CODEX_HANDOFF_DIR = tempDir;
+  process.env.BPB_RECOGNITION_MAX_TEMPLATES = "0";
 });
 
 afterEach(async () => {
@@ -52,6 +54,11 @@ afterEach(async () => {
     delete process.env.CODEX_HANDOFF_DIR;
   } else {
     process.env.CODEX_HANDOFF_DIR = originalHandoffDir;
+  }
+  if (originalRecognitionMaxTemplates === undefined) {
+    delete process.env.BPB_RECOGNITION_MAX_TEMPLATES;
+  } else {
+    process.env.BPB_RECOGNITION_MAX_TEMPLATES = originalRecognitionMaxTemplates;
   }
   await rm(tempDir, { recursive: true, force: true });
 });
@@ -83,7 +90,7 @@ describe("Codex handoff API", () => {
     expect(complete.resultPath).toBe(created.resultPath);
     expect(complete.screenshotPath).toBe(created.screenshotPath);
     expect(complete.result.gameState.className).toBe("Ranger");
-    expect(complete.result.correctionQuestions.length).toBeGreaterThan(0);
-    expect(complete.result.recommendation).toBeNull();
+    expect(complete.result.correctionQuestions).toEqual([]);
+    expect(complete.result.recommendation).not.toBeNull();
   });
 });

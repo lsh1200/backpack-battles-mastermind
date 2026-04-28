@@ -57,6 +57,22 @@ describe("correction loop", () => {
     expect(shopQuestion?.options.slice(0, 4)).toEqual(["Stone", "Banana", "Broom", "Pan"]);
   });
 
+  it("keeps the current tentative item name selectable when it is not in candidate options", () => {
+    const luckyState: GameState = {
+      ...state,
+      shopItems: [],
+      backpackItems: [{ name: "Lucky Clover", location: "bag", x: 2, y: 2 }],
+      uncertainFields: ["backpackItems.0.name"],
+    };
+    const questions = buildCorrectionQuestions(luckyState, validation, ["Stone", "Wooden Sword"], {
+      "backpackItems.0.name": ["Leather Bag", "Spiked Shield"],
+    });
+    const backpackQuestion = questions.find((question) => question.field === "backpackItems.0.name");
+
+    expect(backpackQuestion?.options).toContain("Lucky Clover");
+    expect(backpackQuestion?.options.slice(0, 3)).toEqual(["Leather Bag", "Spiked Shield", "Lucky Clover"]);
+  });
+
   it("applies class and shop item corrections", () => {
     const corrected = applyCorrections(state, {
       className: "Ranger",

@@ -2,6 +2,21 @@ import type { CorrectionQuestion, GameState, ShopItem, ValidationReport } from "
 
 const CLASS_OPTIONS = ["Ranger", "Reaper", "Berserker", "Pyromancer", "Mage", "Adventurer", "Engineer"];
 const MANUAL_OPTIONS = ["Correct", "Needs manual edit"];
+const UNKNOWN_ITEM = "Unknown Item";
+
+function currentItemNameForField(gameState: GameState, field: string): string | undefined {
+  const match = field.match(/^(shopItems|backpackItems)\.(\d+)\.name$/);
+  if (!match) {
+    return undefined;
+  }
+
+  const [, collection, indexText] = match;
+  const index = Number(indexText);
+  const item = collection === "shopItems" ? gameState.shopItems[index] : gameState.backpackItems[index];
+  const name = item?.name.trim();
+
+  return name && name !== UNKNOWN_ITEM ? name : undefined;
+}
 
 export function buildCorrectionQuestions(
   gameState: GameState,
@@ -22,7 +37,12 @@ export function buildCorrectionQuestions(
 
     if ((field.startsWith("shopItems.") || field.startsWith("backpackItems.")) && field.endsWith(".name")) {
       const candidateOptions = candidateOptionsByField[field] ?? [];
-      const options = Array.from(new Set([...candidateOptions, ...knownItemNames])).slice(0, 12);
+      const currentItemName = currentItemNameForField(gameState, field);
+      const currentItemOptions = currentItemName && (candidateOptions.length > 0 || knownItemNames.length > 0) ? [currentItemName] : [];
+      const optionPriority = field.startsWith("backpackItems.")
+        ? [...candidateOptions, ...currentItemOptions, ...knownItemNames]
+        : [...candidateOptions, ...knownItemNames, ...currentItemOptions];
+      const options = Array.from(new Set(optionPriority)).slice(0, 12);
 
       return {
         field,

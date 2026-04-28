@@ -4,6 +4,7 @@ import type { BpbCache } from "@/lib/bpb/schemas";
 import type { GameState } from "@/lib/core/types";
 import {
   applyItemRecognitionToGameState,
+  type ItemRecognitionReport,
   recognizeItemsFromScreenshot,
   type RecognitionScreenProfile,
 } from "./item-recognizer";
@@ -178,5 +179,70 @@ describe("deterministic item recognizer", () => {
       },
     ]);
     expect(merged.uncertainFields).toEqual([]);
+  });
+
+  it("preserves vision item names when local template matching is uncertain", async () => {
+    const report = await recognizeItemsFromScreenshot({
+      image: await screenshotWithSquare("#1f78d1"),
+      bpbCache: await cache(),
+      profile,
+    });
+    const merged = applyItemRecognitionToGameState(
+      baseGameState({
+        shopItems: [{ name: "Customer Card", slot: "shop-1", sale: true, price: 4 }],
+      }),
+      report,
+    );
+
+    expect(merged.shopItems).toEqual([
+      {
+        name: "Customer Card",
+        slot: "shop-1",
+        sale: true,
+        price: 4,
+      },
+    ]);
+    expect(merged.uncertainFields).toEqual(["shopItems.0.name"]);
+  });
+
+  it("does not append rejected local-only slots as extra unknown items", () => {
+    const report: ItemRecognitionReport = {
+      source: "mixed",
+      shopItems: [],
+      backpackItems: [
+        { name: "Unknown Item", location: "bag", x: 0, y: 0 },
+        { name: "Unknown Item", location: "bag", x: 3, y: 1 },
+      ],
+      uncertainFields: ["backpackItems.0.name", "backpackItems.1.name"],
+      warnings: ["local template confidence is low."],
+      candidateOptionsByField: {},
+      matches: [
+        {
+          region: "backpack",
+          slot: "bag-main",
+          field: "backpackItems.0.name",
+          crop: { x: 0, y: 0, width: 10, height: 10 },
+          accepted: false,
+          candidates: [],
+        },
+        {
+          region: "backpack",
+          slot: "extra",
+          field: "backpackItems.1.name",
+          crop: { x: 10, y: 0, width: 10, height: 10 },
+          accepted: false,
+          candidates: [],
+        },
+      ],
+    };
+    const merged = applyItemRecognitionToGameState(
+      baseGameState({
+        backpackItems: [{ name: "Lucky Clover", location: "bag", x: 2, y: 2 }],
+      }),
+      report,
+    );
+
+    expect(merged.backpackItems).toEqual([{ name: "Lucky Clover", location: "bag", x: 2, y: 2 }]);
+    expect(merged.uncertainFields).toEqual(["backpackItems.0.name", "backpackItems.1.name"]);
   });
 });

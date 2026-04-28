@@ -73,7 +73,7 @@ const FEATURE_SIZE = 32;
 const UNKNOWN_ITEM = "Unknown Item";
 const DEFAULT_HIGH_CONFIDENCE_THRESHOLD = 0.82;
 const DEFAULT_MIN_CANDIDATE_GAP = 0.035;
-const DEFAULT_MAX_TEMPLATES = 64;
+const DEFAULT_MAX_TEMPLATES = 16;
 const templateCache = new Map<string, Promise<ImageFeature>>();
 
 function clampCrop(crop: Crop, width: number, height: number): Crop | null {
@@ -252,6 +252,17 @@ async function buildTemplates(cache: BpbCache, maxTemplates: number): Promise<Te
   return templates.filter((template): template is TemplateFeature => template !== null);
 }
 
+function configuredMaxTemplates(inputMaxTemplates: number | undefined): number {
+  if (inputMaxTemplates !== undefined) {
+    return inputMaxTemplates;
+  }
+
+  const envValue = process.env.BPB_RECOGNITION_MAX_TEMPLATES;
+  const parsed = envValue === undefined ? Number.NaN : Number(envValue);
+
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : DEFAULT_MAX_TEMPLATES;
+}
+
 async function recognizeSlots(input: {
   image: Buffer;
   imageWidth: number;
@@ -349,7 +360,7 @@ export async function recognizeItemsFromScreenshot(input: RecognizeItemsInput): 
   const metadata = await sharp(input.image).rotate().metadata();
   const imageWidth = metadata.width ?? 0;
   const imageHeight = metadata.height ?? 0;
-  const templates = await buildTemplates(input.bpbCache, input.maxTemplates ?? DEFAULT_MAX_TEMPLATES);
+  const templates = await buildTemplates(input.bpbCache, configuredMaxTemplates(input.maxTemplates));
 
   if (templates.length === 0) {
     return {
@@ -402,36 +413,46 @@ export async function recognizeItemsFromScreenshot(input: RecognizeItemsInput): 
   };
 }
 
-function mergeShopItems(visionItems: ShopItem[], recognizedItems: ShopItem[]): ShopItem[] {
+function mergeShopItems(visionItems: ShopItem[], recognizedItems: ShopItem[], acceptedFields: Set<string>): ShopItem[] {
   if (recognizedItems.length === 0) {
     return visionItems;
   }
 
-  return recognizedItems.map((recognized, index) => {
+  return recognizedItems.flatMap((recognized, index) => {
     const visionItem = visionItems.find((item) => item.slot === recognized.slot) ?? visionItems[index];
+    if (!acceptedFields.has(`shopItems.${index}.name`)) {
+      return visionItem ? [visionItem] : [];
+    }
 
-    return {
+    return [{
       ...recognized,
       sale: visionItem?.sale ?? recognized.sale,
       ...(visionItem?.price !== undefined ? { price: visionItem.price } : {}),
-    };
+    }];
   });
 }
 
-function mergeBackpackItems(visionItems: BackpackItem[], recognizedItems: BackpackItem[]): BackpackItem[] {
+function mergeBackpackItems(
+  visionItems: BackpackItem[],
+  recognizedItems: BackpackItem[],
+  acceptedFields: Set<string>,
+): BackpackItem[] {
   if (recognizedItems.length === 0) {
     return visionItems;
   }
 
-  return recognizedItems.map((recognized, index) => {
+  return recognizedItems.flatMap((recognized, index) => {
     const visionItem = visionItems[index];
+    if (!acceptedFields.has(`backpackItems.${index}.name`)) {
+      return visionItem ? [visionItem] : [];
+    }
 
-    return {
+    return [{
       ...recognized,
       location: visionItem?.location ?? recognized.location,
       ...(visionItem?.x !== undefined && recognized.x === undefined ? { x: visionItem.x } : {}),
       ...(visionItem?.y !== undefined && recognized.y === undefined ? { y: visionItem.y } : {}),
-    };
+    }];
   });
 }
 
@@ -444,8 +465,8 @@ export function applyItemRecognitionToGameState(gameState: GameState, report: It
 
   return {
     ...gameState,
-    shopItems: mergeShopItems(gameState.shopItems, report.shopItems),
-    backpackItems: mergeBackpackItems(gameState.backpackItems, report.backpackItems),
+    shopItems: mergeShopItems(gameState.shopItems, report.shopItems, recognizedFields),
+    backpackItems: mergeBackpackItems(gameState.backpackItems, report.backpackItems, recognizedFields),
     uncertainFields: uniqueStrings([
       ...gameState.uncertainFields.filter((field) => !recognizedFields.has(field)),
       ...report.uncertainFields,
