@@ -3,6 +3,7 @@ import { analyzeCorrectedState } from "@/lib/analysis/analyze";
 import { readBpbCache } from "@/lib/bpb/store";
 import { AnalysisResultSchema, GameStateSchema } from "@/lib/core/schemas";
 import { saveAnalysisFixture } from "@/lib/fixtures/store";
+import { applyItemRecognitionToGameState, recognizeItemsFromScreenshot } from "@/lib/vision/item-recognizer";
 import { extractGameStateWithVision } from "@/lib/vision/openai";
 import { validateScreenshotPixels } from "@/lib/vision/pixel-validator";
 
@@ -19,13 +20,23 @@ export async function POST(request: Request) {
     const image = Buffer.from(await file.arrayBuffer());
     const [bpbCache, validation] = await Promise.all([readBpbCache(), validateScreenshotPixels(image)]);
     const hasCorrectedState = typeof correctedState === "string" && correctedState.trim().length > 0;
+    const itemRecognitionReport = hasCorrectedState
+      ? null
+      : await recognizeItemsFromScreenshot({
+          image,
+          bpbCache,
+        });
     const gameState = hasCorrectedState
       ? GameStateSchema.parse(JSON.parse(String(correctedState)))
-      : await extractGameStateWithVision({
-          image,
-          mimeType: file.type || "image/png",
-          relevantItems: bpbCache?.items.slice(0, 120) ?? [],
-        });
+      : applyItemRecognitionToGameState(
+          await extractGameStateWithVision({
+            image,
+            mimeType: file.type || "image/png",
+            relevantItems: bpbCache?.items.slice(0, 120) ?? [],
+            deterministicRecognition: itemRecognitionReport,
+          }),
+          itemRecognitionReport,
+        );
 
     const result = AnalysisResultSchema.parse(
       await analyzeCorrectedState({
@@ -33,7 +44,8 @@ export async function POST(request: Request) {
         validation,
         bpbCache,
         correctionPromptsUsed: [],
-        itemRecognitionSource: hasCorrectedState ? "user-confirmed" : "llm-fallback",
+        itemRecognitionSource: hasCorrectedState ? "user-confirmed" : itemRecognitionReport?.source,
+        candidateOptionsByField: itemRecognitionReport?.candidateOptionsByField,
       }),
     );
 

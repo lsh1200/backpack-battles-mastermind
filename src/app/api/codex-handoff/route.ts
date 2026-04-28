@@ -4,6 +4,7 @@ import { analyzeCorrectedState } from "@/lib/analysis/analyze";
 import { readBpbCache } from "@/lib/bpb/store";
 import { AnalysisResultSchema } from "@/lib/core/schemas";
 import { createCodexHandoff, readCodexHandoff, readCodexHandoffResult } from "@/lib/codex-handoff/store";
+import { applyItemRecognitionToGameState, recognizeItemsFromScreenshot } from "@/lib/vision/item-recognizer";
 import { validateScreenshotPixels } from "@/lib/vision/pixel-validator";
 
 export async function POST(request: Request) {
@@ -17,9 +18,11 @@ export async function POST(request: Request) {
 
     const image = Buffer.from(await file.arrayBuffer());
     const [bpbCache, validation] = await Promise.all([readBpbCache(), validateScreenshotPixels(image)]);
+    const itemRecognitionReport = await recognizeItemsFromScreenshot({ image, bpbCache });
     const handoff = await createCodexHandoff({
       bpbCache,
       image,
+      itemRecognitionReport,
       mimeType: file.type || "image/png",
       validation,
     });
@@ -69,11 +72,12 @@ export async function GET(request: Request) {
     const bpbCache = await readBpbCache();
     const result = AnalysisResultSchema.parse(
       await analyzeCorrectedState({
-        gameState: handoffResult.gameState,
+        gameState: applyItemRecognitionToGameState(handoffResult.gameState, handoff.itemRecognitionReport ?? null),
         validation: handoff.validation,
         bpbCache,
         correctionPromptsUsed: ["codex-test-mode"],
-        itemRecognitionSource: "llm-fallback",
+        itemRecognitionSource: handoff.itemRecognitionReport?.source ?? "llm-fallback",
+        candidateOptionsByField: handoff.itemRecognitionReport?.candidateOptionsByField,
       }),
     );
 

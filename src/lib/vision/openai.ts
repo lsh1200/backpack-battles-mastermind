@@ -2,11 +2,13 @@ import OpenAI from "openai";
 import type { BpbItem } from "@/lib/bpb/schemas";
 import { GameStateSchema } from "@/lib/core/schemas";
 import type { GameState } from "@/lib/core/types";
+import type { ItemRecognitionReport } from "./item-recognizer";
 
 type ExtractInput = {
   image: Buffer;
   mimeType: string;
   relevantItems: BpbItem[];
+  deterministicRecognition?: ItemRecognitionReport | null;
   client?: VisionClient;
   model?: string;
   apiKey?: string;
@@ -57,6 +59,24 @@ function buildVisionRequest(input: ExtractInput, model: string): VisionRequest {
     .filter((item) => item.grounded)
     .map((item) => item.name)
     .join(", ");
+  const deterministicContext = input.deterministicRecognition
+    ? [
+        "Deterministic local recognition candidates:",
+        JSON.stringify(
+          {
+            source: input.deterministicRecognition.source,
+            shopItems: input.deterministicRecognition.shopItems,
+            backpackItems: input.deterministicRecognition.backpackItems,
+            uncertainFields: input.deterministicRecognition.uncertainFields,
+            candidateOptionsByField: input.deterministicRecognition.candidateOptionsByField,
+            warnings: input.deterministicRecognition.warnings,
+          },
+          null,
+          2,
+        ),
+        "Do not replace high-confidence deterministic item names. Use this only to audit coarse screen fields, sale/price metadata, and fields already marked uncertain.",
+      ].join("\n")
+    : "Deterministic local recognition candidates: none were provided.";
 
   return {
     model,
@@ -73,6 +93,7 @@ function buildVisionRequest(input: ExtractInput, model: string): VisionRequest {
               "Treat LLM fallback item reads as provisional: if a sprite cannot be matched to a local BPB item, use Unknown Item and add the field path to uncertainFields.",
               "Locate the Shop and Inventory labels first, then read item sprites by their positions relative to those anchors.",
               "Sale labels and price tags are not items; attach them as sale/price metadata to the nearby item sprite.",
+              deterministicContext,
               "Use these grounded BPB item names when possible:",
               itemNames || "No local items were provided.",
               "Use uncertainFields for any class, gold, round, item, or location you are not confident about.",

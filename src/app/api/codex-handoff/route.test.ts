@@ -83,6 +83,7 @@ describe("Codex handoff API", () => {
     expect(complete.resultPath).toBe(created.resultPath);
     expect(complete.screenshotPath).toBe(created.screenshotPath);
     expect(complete.result.gameState.className).toBe("Ranger");
-    expect(complete.result.recommendation).not.toBeNull();
+    expect(complete.result.correctionQuestions.length).toBeGreaterThan(0);
+    expect(complete.result.recommendation).toBeNull();
   });
 });

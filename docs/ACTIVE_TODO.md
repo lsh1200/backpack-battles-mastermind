@@ -141,7 +141,7 @@ These are real ideas, but they must not interrupt the active task unless they be
 
 ### Task 12: Deterministic Item Recognition Primary Pipeline
 
-Status: `ready`
+Status: `in_progress`
 
 Goal: Replace LLM item-name reading with deterministic local item recognition as the primary path. Use screenshot regions, BPB item icons/templates, pixel/feature matching, confidence scoring, and targeted user confirmation when confidence is low.
 

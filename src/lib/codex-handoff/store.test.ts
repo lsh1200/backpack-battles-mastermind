@@ -95,6 +95,31 @@ describe("Codex handoff store", () => {
     expect(handoff.resultPath.endsWith("result.json")).toBe(true);
   });
 
+  it("includes deterministic recognition candidates in the handoff prompt when available", async () => {
+    const handoff = await createCodexHandoff({
+      baseDir: tempDir,
+      bpbCache: cache,
+      image: Buffer.from("fake image"),
+      mimeType: "image/png",
+      validation,
+      itemRecognitionReport: {
+        source: "mixed",
+        shopItems: [{ name: "Unknown Item", slot: "shop-1", sale: false }],
+        backpackItems: [],
+        uncertainFields: ["shopItems.0.name"],
+        warnings: ["shop-1 local template confidence is low."],
+        candidateOptionsByField: {
+          "shopItems.0.name": ["Stone", "Banana", "Broom"],
+        },
+        matches: [],
+      },
+    });
+
+    expect(handoff.prompt).toContain("Deterministic local recognition candidates");
+    expect(handoff.prompt).toContain("shopItems.0.name");
+    expect(handoff.prompt).toContain("Stone");
+  });
+
   it("reports pending until result.json exists, then parses Codex GameState output", async () => {
     const handoff = await createCodexHandoff({
       baseDir: tempDir,

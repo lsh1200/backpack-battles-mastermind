@@ -48,6 +48,15 @@ describe("correction loop", () => {
     expect(() => CorrectionQuestionSchema.parse(shopQuestion)).not.toThrow();
   });
 
+  it("uses deterministic recognition candidates before the broad BPB item list", () => {
+    const questions = buildCorrectionQuestions(state, validation, ["Broom", "Pan", "Hero Sword"], {
+      "shopItems.0.name": ["Stone", "Banana", "Broom"],
+    });
+    const shopQuestion = questions.find((question) => question.field === "shopItems.0.name");
+
+    expect(shopQuestion?.options.slice(0, 4)).toEqual(["Stone", "Banana", "Broom", "Pan"]);
+  });
+
   it("applies class and shop item corrections", () => {
     const corrected = applyCorrections(state, {
       className: "Ranger",
@@ -56,6 +65,30 @@ describe("correction loop", () => {
 
     expect(corrected.className).toBe("Ranger");
     expect(corrected.shopItems[0]?.name).toBe("Broom");
+    expect(corrected.uncertainFields).toEqual([]);
+    expect(() => GameStateSchema.parse(corrected)).not.toThrow();
+  });
+
+  it("builds and applies backpack item name corrections", () => {
+    const backpackState: GameState = {
+      ...state,
+      shopItems: [],
+      backpackItems: [{ name: "Unknown Item", location: "bag", x: 1, y: 1 }],
+      uncertainFields: ["backpackItems.0.name"],
+    };
+    const questions = buildCorrectionQuestions(backpackState, validation, ["Wooden Sword", "Ranger Bag"], {
+      "backpackItems.0.name": ["Wooden Sword", "Broom"],
+    });
+    const corrected = applyCorrections(backpackState, {
+      "backpackItems.0.name": "Wooden Sword",
+    });
+
+    expect(questions.find((question) => question.field === "backpackItems.0.name")?.options.slice(0, 3)).toEqual([
+      "Wooden Sword",
+      "Broom",
+      "Ranger Bag",
+    ]);
+    expect(corrected.backpackItems[0]?.name).toBe("Wooden Sword");
     expect(corrected.uncertainFields).toEqual([]);
     expect(() => GameStateSchema.parse(corrected)).not.toThrow();
   });

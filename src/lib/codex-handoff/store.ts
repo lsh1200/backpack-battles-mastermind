@@ -4,7 +4,13 @@ import { isAbsolute, join, resolve } from "node:path";
 import type { BpbCache, BpbItem } from "@/lib/bpb/schemas";
 import { GameStateSchema } from "@/lib/core/schemas";
 import type { GameState, ValidationReport } from "@/lib/core/types";
-import { CodexHandoffResultSchema, CodexHandoffSchema, type CodexHandoffItem } from "./schemas";
+import type { ItemRecognitionReport } from "@/lib/vision/item-recognizer";
+import {
+  CodexHandoffResultSchema,
+  CodexHandoffSchema,
+  CodexItemRecognitionReportSchema,
+  type CodexHandoffItem,
+} from "./schemas";
 
 export const DEFAULT_CODEX_HANDOFF_DIR = "data/codex-handoffs";
 
@@ -14,6 +20,7 @@ type CreateCodexHandoffInput = {
   image: Buffer;
   mimeType: string;
   validation: ValidationReport;
+  itemRecognitionReport?: ItemRecognitionReport | null;
 };
 
 type CreatedCodexHandoff = {
@@ -73,7 +80,27 @@ function buildPrompt(input: {
   screenshotPath: string;
   validation: ValidationReport;
   relevantItems: CodexHandoffItem[];
+  itemRecognitionReport?: ItemRecognitionReport | null;
 }): string {
+  const recognitionContext = input.itemRecognitionReport
+    ? [
+        "Deterministic local recognition candidates:",
+        JSON.stringify(
+          {
+            source: input.itemRecognitionReport.source,
+            shopItems: input.itemRecognitionReport.shopItems,
+            backpackItems: input.itemRecognitionReport.backpackItems,
+            uncertainFields: input.itemRecognitionReport.uncertainFields,
+            candidateOptionsByField: input.itemRecognitionReport.candidateOptionsByField,
+            warnings: input.itemRecognitionReport.warnings,
+          },
+          null,
+          2,
+        ),
+        "Do not replace high-confidence deterministic item names. Use Codex only to audit coarse screen fields, sale/price metadata, and fields already marked uncertain.",
+      ]
+    : ["Deterministic local recognition candidates: none were provided."];
+
   return [
     "# Backpack Battles Codex Test Handoff",
     "",
@@ -86,6 +113,7 @@ function buildPrompt(input: {
     "If a sprite cannot be matched to a grounded local item, use Unknown Item and add the field path to uncertainFields.",
     "Locate the Shop and Inventory labels first, then read item sprites by their positions relative to those anchors.",
     "Sale labels and price tags are not items; attach them as sale/price metadata to the nearby item sprite.",
+    ...recognitionContext,
     "If you are unsure about a field, use a plausible value and include that field path in uncertainFields.",
     "Use local BPB item names from the grounded list when possible. Do not invent item facts.",
     "",
@@ -134,26 +162,40 @@ function handoffPaths(id: string, baseDir?: string, mimeType = "image/png") {
   };
 }
 
+function parseStoredRecognitionReport(value: unknown): ItemRecognitionReport | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return CodexItemRecognitionReportSchema.parse(value) as ItemRecognitionReport;
+}
+
 export async function createCodexHandoff(input: CreateCodexHandoffInput): Promise<CreatedCodexHandoff> {
   const id = randomUUID();
   const paths = handoffPaths(id, input.baseDir, input.mimeType);
   const items = relevantItems(input.bpbCache);
+  const itemRecognitionReport = parseStoredRecognitionReport(input.itemRecognitionReport);
   const prompt = buildPrompt({
     resultPath: paths.resultPath,
     screenshotPath: paths.screenshotPath,
     validation: input.validation,
     relevantItems: items,
+    itemRecognitionReport,
   });
-  const handoff = CodexHandoffSchema.parse({
-    id,
-    createdAt: new Date().toISOString(),
-    mimeType: input.mimeType,
-    screenshotPath: paths.screenshotPath,
-    promptPath: paths.promptPath,
-    resultPath: paths.resultPath,
-    validation: input.validation,
-    relevantItems: items,
-  });
+  const handoff = {
+    ...CodexHandoffSchema.parse({
+      id,
+      createdAt: new Date().toISOString(),
+      mimeType: input.mimeType,
+      screenshotPath: paths.screenshotPath,
+      promptPath: paths.promptPath,
+      resultPath: paths.resultPath,
+      validation: input.validation,
+      relevantItems: items,
+      itemRecognitionReport,
+    }),
+    itemRecognitionReport,
+  };
 
   await mkdir(paths.dir, { recursive: true });
   await Promise.all([
@@ -181,7 +223,12 @@ export async function readCodexHandoff(id: string, baseDir?: string) {
     throw new Error("Invalid handoff path");
   }
 
-  return CodexHandoffSchema.parse(JSON.parse(await readFile(handoffPath, "utf8")));
+  const raw = JSON.parse(await readFile(handoffPath, "utf8"));
+
+  return {
+    ...CodexHandoffSchema.parse(raw),
+    itemRecognitionReport: parseStoredRecognitionReport(raw.itemRecognitionReport),
+  };
 }
 
 export async function readCodexHandoffResult(id: string, baseDir?: string): Promise<CodexHandoffResult> {

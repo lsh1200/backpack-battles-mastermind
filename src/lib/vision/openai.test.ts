@@ -139,6 +139,34 @@ describe("OpenAI vision helpers", () => {
     expect(text).toContain("LLM fallback");
   });
 
+  it("passes deterministic item candidates to vision for audit instead of raw item naming", async () => {
+    const calls: VisionRequest[] = [];
+
+    await extractGameStateWithVision({
+      image: Buffer.from("abc"),
+      mimeType: "image/png",
+      relevantItems: [broom],
+      deterministicRecognition: {
+        source: "mixed",
+        shopItems: [{ name: "Unknown Item", slot: "shop-1", sale: false }],
+        backpackItems: [],
+        uncertainFields: ["shopItems.0.name"],
+        warnings: ["shop-1 local template confidence is low."],
+        candidateOptionsByField: {
+          "shopItems.0.name": ["Stone", "Banana", "Broom"],
+        },
+        matches: [],
+      },
+      client: mockClient(calls),
+    });
+
+    const text = calls[0]?.input[0]?.content.find((part) => part.type === "input_text")?.text ?? "";
+    expect(text).toContain("Deterministic local recognition candidates");
+    expect(text).toContain("shopItems.0.name");
+    expect(text).toContain("Stone");
+    expect(text).toContain("Do not replace high-confidence deterministic item names");
+  });
+
   it("uses the model environment override and default model with injected clients", async () => {
     const originalModel = process.env.OPENAI_VISION_MODEL;
     const envCalls: VisionRequest[] = [];

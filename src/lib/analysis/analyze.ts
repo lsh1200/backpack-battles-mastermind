@@ -10,6 +10,7 @@ type AnalyzeCorrectedStateInput = {
   bpbCache: BpbCache | null;
   correctionPromptsUsed: string[];
   itemRecognitionSource?: Recommendation["recognitionPolicy"]["itemRecognition"];
+  candidateOptionsByField?: Record<string, string[]>;
 };
 
 function knownGroundedItemNames(bpbCache: BpbCache | null): string[] {
@@ -60,7 +61,12 @@ function groundGameState(gameState: GameState, bpbCache: BpbCache | null): GameS
 
 export async function analyzeCorrectedState(input: AnalyzeCorrectedStateInput): Promise<AnalysisResult> {
   const { gameState, validation, bpbCache, correctionPromptsUsed } = input;
-  const correctionQuestions = buildCorrectionQuestions(gameState, validation, knownGroundedItemNames(bpbCache));
+  const correctionQuestions = buildCorrectionQuestions(
+    gameState,
+    validation,
+    knownGroundedItemNames(bpbCache),
+    input.candidateOptionsByField,
+  );
 
   if (correctionQuestions.length > 0) {
     return {
