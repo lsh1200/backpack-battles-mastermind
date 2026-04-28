@@ -82,9 +82,79 @@ describe("optimizePlacement", () => {
 
     expect(plan.layoutConfidence).toBe("considered");
     expect(plan.layoutOptions).toHaveLength(2);
+    expect(plan.layoutOptions[0].bags).toEqual([
+      expect.objectContaining({ item: "Ranger Bag", x: 0, y: 0, width: 4, height: 3 }),
+    ]);
     expect(plan.layoutOptions[0].moves).toContain("Keep Wooden Sword at (1, 1).");
     expect(plan.layoutOptions[0].moves).toContain("Place Broom at (2, 1) as your second active weapon.");
     expect(plan.layoutOptions[1].tradeoffs.join(" ")).toContain("safer stamina");
+  });
+
+  it("renders distinct bag sprites when bag images and BPB shapes are available", () => {
+    const plan = optimizePlacement({
+      gameState: state({
+        backpackItems: [
+          {
+            name: "Leather Bag",
+            location: "bag",
+            itemKind: "bag",
+            x: 0,
+            y: 1,
+            footprint: {
+              source: "local-data",
+              cells: [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 0, y: 1 },
+                { x: 1, y: 1 },
+              ],
+            },
+          },
+          {
+            name: "Ranger Bag",
+            location: "bag",
+            itemKind: "bag",
+            x: 2,
+            y: 0,
+            footprint: {
+              source: "local-data",
+              cells: [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 0, y: 1 },
+                { x: 1, y: 1 },
+                { x: 0, y: 2 },
+                { x: 1, y: 2 },
+              ],
+            },
+          },
+          { name: "Wooden Sword", location: "bag", x: 2, y: 1 },
+        ],
+      }),
+      targetItems: ["Stone"],
+      itemShapes: {
+        "Leather Bag": [
+          [1, 1],
+          [1, 1],
+        ],
+        "Ranger Bag": [
+          [1, 1],
+          [1, 1],
+          [1, 1],
+        ],
+        "Wooden Sword": [[1], [1]],
+        Stone: [[1]],
+      },
+      itemImages: {
+        "Leather Bag": "https://awerc.github.io/bpb-cdn/i/LeatherBag.webp",
+        "Ranger Bag": "https://awerc.github.io/bpb-cdn/i/RangerBag.webp",
+      },
+    });
+
+    expect(plan.layoutOptions[0].bags).toEqual([
+      expect.objectContaining({ item: "Leather Bag", x: 0, y: 1, width: 2, height: 2, imageUrl: expect.stringContaining("LeatherBag.webp") }),
+      expect.objectContaining({ item: "Ranger Bag", x: 2, y: 0, width: 2, height: 3, imageUrl: expect.stringContaining("RangerBag.webp") }),
+    ]);
   });
 
   it("generates option cells from active bag cells instead of fixed full-board coordinates", () => {

@@ -42,6 +42,21 @@ const recommendation = {
         { x: 0, y: 2 },
         { x: 1, y: 2 },
       ],
+      bags: [
+        {
+          item: "Ranger Bag",
+          x: 0,
+          y: 0,
+          width: 2,
+          height: 3,
+          shape: [
+            [1, 1],
+            [1, 1],
+            [1, 1],
+          ],
+          imageUrl: "https://awerc.github.io/bpb-cdn/i/RangerBag.webp",
+        },
+      ],
       cells: [
         {
           item: "Wooden Sword",
@@ -82,6 +97,7 @@ const recommendation = {
       tradeoffs: ["Slightly less weapon adjacency."],
       boardDimensions: { width: 9, height: 7 },
       boardCells: [],
+      bags: [],
       cells: [{ item: "Banana", x: 0, y: 2, width: 1, height: 1, role: "stamina support" }],
       benchItems: [],
     },
@@ -109,6 +125,8 @@ describe("RecommendationPanel", () => {
     expect(markup).toContain("inventory-board");
     expect(markup).toContain("inventory-board-cell has-bag");
     expect(markup).toContain("inventory-board-cell no-bag");
+    expect(markup).toContain("inventory-bag");
+    expect(markup).toContain("RangerBag.webp");
     expect(markup).toContain("WoodenSword.webp");
     expect(markup).toContain("Item Recognition");
     expect(markup).toContain("local-first");

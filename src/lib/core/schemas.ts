@@ -105,6 +105,16 @@ export const LayoutCellSchema = z.object({
   role: z.string().min(1).optional(),
 });
 
+export const LayoutBagSchema = z.object({
+  item: z.string().min(1),
+  x: z.number().int().nonnegative(),
+  y: z.number().int().nonnegative(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  shape: z.array(z.array(z.number().int().nonnegative())),
+  imageUrl: z.string().url().optional(),
+});
+
 export const LayoutBenchItemSchema = z.object({
   item: z.string().min(1),
   reason: z.string().min(1),
@@ -127,6 +137,7 @@ export const LayoutOptionSchema = z.object({
   tradeoffs: z.array(z.string().min(1)),
   boardDimensions: BoardDimensionsSchema.default({ width: 9, height: 7 }),
   boardCells: z.array(FootprintCellSchema).default([]),
+  bags: z.array(LayoutBagSchema).default([]),
   cells: z.array(LayoutCellSchema),
   benchItems: z.array(LayoutBenchItemSchema).default([]),
 });

@@ -25,6 +25,7 @@ type OptimizePlacementInput = {
 
 type PlannedCell = LayoutOption["cells"][number];
 type BenchItem = LayoutOption["benchItems"][number];
+type PlannedBag = LayoutOption["bags"][number];
 type ShapeCell = { x: number; y: number };
 type ShapePlacement = {
   shape: number[][];
@@ -169,6 +170,35 @@ function plannedCellFor(
   };
 }
 
+function shapeFromCells(cells: ShapeCell[]): number[][] {
+  const width = Math.max(1, ...cells.map((cell) => cell.x + 1));
+  const height = Math.max(1, ...cells.map((cell) => cell.y + 1));
+  const occupied = new Set(cells.map(cellKey));
+
+  return Array.from({ length: height }, (_, y) =>
+    Array.from({ length: width }, (__, x) => (occupied.has(cellKey({ x, y })) ? 1 : 0)),
+  );
+}
+
+function bagsForBoard(
+  board: BagAwareBoard,
+  itemShapes: Record<string, number[][]>,
+  itemImages: Record<string, string>,
+): PlannedBag[] {
+  return board.bags.map((bag) => {
+    const shape = normalizedShape(itemShapes[bag.name] ?? shapeFromCells(bag.footprint.cells), 0);
+    return {
+      item: bag.name,
+      x: bag.x,
+      y: bag.y,
+      width: shapeWidth(shape),
+      height: shapeHeight(shape),
+      shape,
+      ...(itemImages[bag.name] ? { imageUrl: itemImages[bag.name] } : {}),
+    };
+  });
+}
+
 function occupiedKeysFor(origin: { x: number; y: number }, shape: number[][] | undefined): string[] {
   return shapeCells(shape).map((cell) => cellKey({ x: origin.x + cell.x, y: origin.y + cell.y }));
 }
@@ -305,6 +335,7 @@ function buildOption(input: {
   tradeoffs: string[];
   boardDimensions: { width: number; height: number };
   boardCells: { x: number; y: number }[];
+  bags: PlannedBag[];
   cells: PlannedCell[];
   benchItems: BenchItem[];
   gameState: GameState;
@@ -319,6 +350,7 @@ function buildOption(input: {
     tradeoffs: input.tradeoffs,
     boardDimensions: input.boardDimensions,
     boardCells: input.boardCells,
+    bags: input.bags,
     cells: input.cells,
     benchItems: input.benchItems,
   };
@@ -341,6 +373,7 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
 
   const itemShapes = input.itemShapes ?? {};
   const itemImages = input.itemImages ?? {};
+  const bags = bagsForBoard(board, itemShapes, itemImages);
   const tempoPriority = ["Wooden Sword", "Stone", "Lucky Clover", "Walrus Tusk", "Broom", "Banana", "Shiny Shell"];
   const staminaPriority = ["Wooden Sword", "Lucky Clover", "Stone", "Walrus Tusk", "Banana", "Broom", "Shiny Shell"];
   const tempoPlan = cellsForPriority({
@@ -409,6 +442,7 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
         tradeoffs: ["Less flexible utility space because damage pieces get first claim on the board."],
         boardDimensions: board.fullBoard,
         boardCells: board.activeBagCells,
+        bags,
         cells: tempoCells,
         benchItems: tempoPlan.benchItems,
         gameState: input.gameState,
@@ -422,6 +456,7 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
         tradeoffs: ["Slightly safer stamina support, but less aggressive than the tempo weapon layout."],
         boardDimensions: board.fullBoard,
         boardCells: board.activeBagCells,
+        bags,
         cells: staminaCells,
         benchItems: staminaPlan.benchItems,
         gameState: input.gameState,

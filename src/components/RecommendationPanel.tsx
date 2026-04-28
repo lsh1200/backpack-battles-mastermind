@@ -138,26 +138,54 @@ function InventoryItem({
   );
 }
 
+function InventoryBag({
+  bag,
+  optionId,
+  minX,
+  minY,
+}: {
+  bag: Recommendation["layoutOptions"][number]["bags"][number];
+  optionId: string;
+  minX: number;
+  minY: number;
+}) {
+  const style = {
+    gridColumn: `${bag.x - minX + 1} / span ${bag.width}`,
+    gridRow: `${bag.y - minY + 1} / span ${bag.height}`,
+    "--bag-width": bag.width,
+    "--bag-height": bag.height,
+  } as CSSProperties;
+
+  return (
+    <div className="inventory-bag" key={`${optionId}-bag-${bag.item}-${bag.x}-${bag.y}`} style={style} aria-label={`${bag.item} bag`}>
+      {bag.imageUrl ? <img alt={bag.item} src={bag.imageUrl} /> : <span>{bag.item}</span>}
+    </div>
+  );
+}
+
 function LayoutOptionCard({ option }: { option: Recommendation["layoutOptions"][number] }) {
   const optionBoardCells = option.boardCells ?? [];
+  const bags = option.bags ?? [];
   const boardCells = optionBoardCells.length
     ? optionBoardCells
     : option.cells.flatMap((cell) =>
         Array.from({ length: cell.height }).flatMap((_, y) =>
           Array.from({ length: cell.width }).map((__, x) => ({ x: cell.x + x, y: cell.y + y })),
         ),
-      );
-  const minX = Math.min(0, ...boardCells.map((cell) => cell.x), ...option.cells.map((cell) => cell.x));
-  const minY = Math.min(0, ...boardCells.map((cell) => cell.y), ...option.cells.map((cell) => cell.y));
+  );
+  const minX = Math.min(0, ...boardCells.map((cell) => cell.x), ...bags.map((bag) => bag.x), ...option.cells.map((cell) => cell.x));
+  const minY = Math.min(0, ...boardCells.map((cell) => cell.y), ...bags.map((bag) => bag.y), ...option.cells.map((cell) => cell.y));
   const boardDimensions = option.boardDimensions ?? BPB_BOARD_DIMENSIONS;
   const maxX = Math.max(
     boardDimensions.width,
     ...boardCells.map((cell) => cell.x + 1),
+    ...bags.map((bag) => bag.x + bag.width),
     ...option.cells.map((cell) => cell.x + cell.width),
   );
   const maxY = Math.max(
     boardDimensions.height,
     ...boardCells.map((cell) => cell.y + 1),
+    ...bags.map((bag) => bag.y + bag.height),
     ...option.cells.map((cell) => cell.y + cell.height),
   );
   const columns = Math.max(BPB_BOARD_DIMENSIONS.width, maxX - minX);
@@ -188,6 +216,9 @@ function LayoutOptionCard({ option }: { option: Recommendation["layoutOptions"][
             key={`${option.id}-board-${cell.x}-${cell.y}`}
             style={{ gridColumn: cell.x - minX + 1, gridRow: cell.y - minY + 1 }}
           />
+        ))}
+        {bags.map((bag) => (
+          <InventoryBag bag={bag} key={`${option.id}-bag-${bag.item}-${bag.x}-${bag.y}`} minX={minX} minY={minY} optionId={option.id} />
         ))}
         {option.cells.map((cell) => (
           <InventoryItem cell={cell} key={`${option.id}-${cell.item}`} minX={minX} minY={minY} optionId={option.id} />
