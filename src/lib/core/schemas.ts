@@ -59,6 +59,9 @@ export const CorrectionQuestionSchema = z.object({
   field: z.string().min(1),
   question: z.string().min(1),
   options: z.array(z.string()).min(1),
+  currentValue: z.string().min(1).optional(),
+  context: z.string().min(1).optional(),
+  imageUrl: z.string().min(1).optional(),
 });
 
 export const CandidateActionSchema = z.object({

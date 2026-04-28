@@ -98,11 +98,17 @@ describe("core schemas", () => {
           field: "className",
           question: "Which class are you playing?",
           options: ["Ranger", "Reaper", "Berserker", "Pyromancer"],
+          currentValue: "Ranger",
+          context: "Class read from character panel",
+          imageUrl: "/api/codex-handoff?id=test&asset=crop&field=className",
         },
       ],
       recommendation: null,
     });
 
     expect(result.correctionQuestions).toHaveLength(1);
+    expect(result.correctionQuestions[0].currentValue).toBe("Ranger");
+    expect(result.correctionQuestions[0].context).toBe("Class read from character panel");
+    expect(result.correctionQuestions[0].imageUrl).toBe("/api/codex-handoff?id=test&asset=crop&field=className");
   });
 });

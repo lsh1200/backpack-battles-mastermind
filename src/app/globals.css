@@ -192,6 +192,16 @@ h1 {
   opacity: 0.55;
 }
 
+.secondary-button {
+  min-height: 40px;
+  border: 1px solid rgba(240, 195, 90, 0.55);
+  border-radius: 6px;
+  background: rgba(240, 195, 90, 0.14);
+  color: var(--accent);
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .state-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -246,6 +256,70 @@ dd {
 .field {
   display: grid;
   gap: 6px;
+}
+
+.correction-card {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.correction-crop {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #050605;
+}
+
+.correction-content {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.correction-question,
+.correction-context,
+.correction-current {
+  margin: 0;
+  line-height: 1.3;
+}
+
+.correction-question {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.correction-context,
+.correction-current {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.correction-current strong {
+  color: var(--text);
+}
+
+.correction-actions {
+  display: grid;
+  grid-template-columns: minmax(92px, 0.32fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.correction-select {
+  display: grid;
+  gap: 4px;
+}
+
+.correction-select span {
+  color: var(--muted);
+  font-size: 0.76rem;
 }
 
 select {
@@ -466,5 +540,17 @@ input {
 
   .state-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .correction-card,
+  .correction-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .correction-crop {
+    width: 100%;
+    height: 128px;
   }
 }

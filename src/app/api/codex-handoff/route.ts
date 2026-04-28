@@ -1,11 +1,65 @@
 import { NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
+import sharp from "sharp";
 import { analyzeCorrectedState } from "@/lib/analysis/analyze";
 import { readBpbCache } from "@/lib/bpb/store";
 import { AnalysisResultSchema } from "@/lib/core/schemas";
+import type { AnalysisResult } from "@/lib/core/types";
+import { codexHandoffCropUrl } from "@/lib/codex-handoff/client";
 import { createCodexHandoff, readCodexHandoff, readCodexHandoffResult } from "@/lib/codex-handoff/store";
+import type { CodexHandoff } from "@/lib/codex-handoff/schemas";
 import { applyItemRecognitionToGameState, recognizeItemsFromScreenshot } from "@/lib/vision/item-recognizer";
 import { validateScreenshotPixels } from "@/lib/vision/pixel-validator";
+
+type Crop = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+function clampCrop(crop: Crop, imageWidth: number, imageHeight: number): Crop | null {
+  const x = Math.max(0, Math.round(crop.x));
+  const y = Math.max(0, Math.round(crop.y));
+  const right = Math.min(imageWidth, Math.round(crop.x + crop.width));
+  const bottom = Math.min(imageHeight, Math.round(crop.y + crop.height));
+  const width = right - x;
+  const height = bottom - y;
+
+  return width > 1 && height > 1 ? { x, y, width, height } : null;
+}
+
+async function cropHandoffScreenshot(handoff: CodexHandoff, field: string): Promise<Buffer | null> {
+  const match = handoff.itemRecognitionReport?.matches.find((candidate) => candidate.field === field);
+  if (!match) {
+    return null;
+  }
+
+  const image = await readFile(handoff.screenshotPath);
+  const metadata = await sharp(image).rotate().metadata();
+  const crop = clampCrop(match.crop, metadata.width ?? 0, metadata.height ?? 0);
+  if (!crop) {
+    return null;
+  }
+
+  return sharp(image)
+    .rotate()
+    .extract({ left: crop.x, top: crop.y, width: crop.width, height: crop.height })
+    .resize(180, 180, { fit: "contain", background: { r: 5, g: 6, b: 5, alpha: 1 } })
+    .png()
+    .toBuffer();
+}
+
+function withCropUrls(result: AnalysisResult, handoffId: string, handoff: CodexHandoff): AnalysisResult {
+  const cropFields = new Set(handoff.itemRecognitionReport?.matches.map((match) => match.field) ?? []);
+
+  return {
+    ...result,
+    correctionQuestions: result.correctionQuestions.map((question) =>
+      cropFields.has(question.field) ? { ...question, imageUrl: codexHandoffCropUrl(handoffId, question.field) } : question,
+    ),
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -67,6 +121,27 @@ export async function GET(request: Request) {
       });
     }
 
+    if (asset === "crop") {
+      const field = url.searchParams.get("field");
+      if (!field) {
+        return NextResponse.json({ error: "crop field is required" }, { status: 400 });
+      }
+
+      const crop = await cropHandoffScreenshot(handoff, field);
+      if (!crop) {
+        return NextResponse.json({ error: "crop not found" }, { status: 404 });
+      }
+
+      const body = crop.buffer.slice(crop.byteOffset, crop.byteOffset + crop.byteLength) as ArrayBuffer;
+
+      return new NextResponse(body, {
+        headers: {
+          "cache-control": "no-store",
+          "content-type": "image/png",
+        },
+      });
+    }
+
     if (asset) {
       return NextResponse.json({ error: "unsupported handoff asset" }, { status: 400 });
     }
@@ -100,7 +175,7 @@ export async function GET(request: Request) {
       }),
     );
 
-    return NextResponse.json({ status: "complete", ...handoffMetadata, result });
+    return NextResponse.json({ status: "complete", ...handoffMetadata, result: withCropUrls(result, handoffId, handoff) });
   } catch (error) {
     const status = (error as NodeJS.ErrnoException).code === "ENOENT" ? 404 : 500;
     return NextResponse.json(

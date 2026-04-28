@@ -194,3 +194,9 @@ Goal: Show the recommended arrangement as an overlay or simple grid diagram so t
 Status: `backlog`
 
 Goal: Store user-confirmed item names and positions from Android screenshots to improve recognition for Henry's device layout over time.
+
+### Task 17: Bag-Aware Container Model
+
+Status: `backlog`
+
+Goal: Model Backpack Battles bags as movable container items that define active inventory space, rather than treating the whole board or raw `(x, y)` reads as unlocked usable space. Future placement advice should distinguish storage, active bag space, bag item placement, and items partially or fully inside a bag.

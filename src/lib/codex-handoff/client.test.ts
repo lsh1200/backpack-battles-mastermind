@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { codexHandoffScreenshotUrl, codexHandoffStatusUrl } from "./client";
+import { codexHandoffCropUrl, codexHandoffScreenshotUrl, codexHandoffStatusUrl } from "./client";
 
 describe("Codex handoff client helpers", () => {
   it("builds the resume status URL for a handoff ID", () => {
@@ -16,5 +16,11 @@ describe("Codex handoff client helpers", () => {
 
   it("URL encodes handoff IDs before placing them in query strings", () => {
     expect(codexHandoffScreenshotUrl("id with spaces")).toBe("/api/codex-handoff?id=id%20with%20spaces&asset=screenshot");
+  });
+
+  it("builds a field-specific crop URL for a handoff item confirmation", () => {
+    expect(codexHandoffCropUrl("handoff id", "shopItems.0.name")).toBe(
+      "/api/codex-handoff?id=handoff%20id&asset=crop&field=shopItems.0.name",
+    );
   });
 });

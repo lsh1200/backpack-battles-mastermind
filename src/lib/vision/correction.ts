@@ -32,33 +32,24 @@ function currentItemNameForField(gameState: GameState, field: string): string | 
   return name && name !== UNKNOWN_ITEM ? name : undefined;
 }
 
-function withCurrentRead(question: string, currentItemName: string | undefined): string {
-  return currentItemName ? `${question} Current read: ${currentItemName}.` : question;
-}
-
-function itemQuestionText(gameState: GameState, field: string): string {
+function itemQuestionContext(gameState: GameState, field: string): string | undefined {
   const itemField = parseItemNameField(field);
   if (!itemField) {
-    return `Confirm ${field}`;
+    return undefined;
   }
-
-  const currentItemName = currentItemNameForField(gameState, field);
 
   if (itemField.collection === "shopItems") {
     const item = gameState.shopItems[itemField.index];
     const slot = item?.slot.trim();
-    const target = slot ? `shop ${slot}` : `shop item ${itemField.index + 1}`;
-
-    return withCurrentRead(`Choose the item in ${target}.`, currentItemName);
+    return slot ? `Shop ${slot}` : `Shop item ${itemField.index + 1}`;
   }
 
   const item = gameState.backpackItems[itemField.index];
-  const location = item?.location && item.location !== "unknown" ? item.location : undefined;
-  const area = location ? `backpack ${location}` : "backpack";
   const hasGridPosition = item?.x !== undefined && item.y !== undefined;
-  const target = hasGridPosition ? `${area} grid (${item.x}, ${item.y})` : `${area} item ${itemField.index + 1}`;
 
-  return withCurrentRead(`Choose the item in ${target}.`, currentItemName);
+  return hasGridPosition
+    ? `Backpack detected position (${item.x}, ${item.y}). Bag space depends on bag placement.`
+    : `Backpack detected item ${itemField.index + 1}. Bag space depends on bag placement.`;
 }
 
 export function buildCorrectionQuestions(
@@ -97,7 +88,9 @@ export function buildCorrectionQuestions(
 
       return {
         field,
-        question: itemQuestionText(gameState, field),
+        question: "What is this item actually?",
+        ...(currentItemName ? { currentValue: currentItemName } : {}),
+        ...(itemQuestionContext(gameState, field) ? { context: itemQuestionContext(gameState, field) } : {}),
         options: options.length > 0 ? options : ["Needs manual edit"],
       };
     }

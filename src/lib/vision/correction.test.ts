@@ -82,10 +82,12 @@ describe("correction loop", () => {
     const questions = buildCorrectionQuestions(shopState, validation, ["Stone", "Banana"]);
     const shopQuestion = questions.find((question) => question.field === "shopItems.0.name");
 
-    expect(shopQuestion?.question).toBe("Choose the item in shop top-right. Current read: Stone.");
+    expect(shopQuestion?.question).toBe("What is this item actually?");
+    expect(shopQuestion?.context).toBe("Shop top-right");
+    expect(shopQuestion?.currentValue).toBe("Stone");
   });
 
-  it("labels backpack item correction questions with their grid position and current read", () => {
+  it("labels backpack item correction questions as detected positions, not confirmed bag grid cells", () => {
     const backpackState: GameState = {
       ...state,
       shopItems: [],
@@ -95,7 +97,9 @@ describe("correction loop", () => {
     const questions = buildCorrectionQuestions(backpackState, validation, ["Lucky Clover"]);
     const backpackQuestion = questions.find((question) => question.field === "backpackItems.0.name");
 
-    expect(backpackQuestion?.question).toBe("Choose the item in backpack bag grid (2, 2). Current read: Lucky Clover.");
+    expect(backpackQuestion?.question).toBe("What is this item actually?");
+    expect(backpackQuestion?.context).toBe("Backpack detected position (2, 2). Bag space depends on bag placement.");
+    expect(backpackQuestion?.currentValue).toBe("Lucky Clover");
   });
 
   it("uses plain language for screenshot quality confirmations", () => {

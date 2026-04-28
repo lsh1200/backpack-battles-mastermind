@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import sharp from "sharp";
@@ -88,6 +88,50 @@ describe("Codex handoff API", () => {
     expect(screenshotResponse.headers.get("content-type")).toBe("image/png");
     expect(screenshotBytes.byteLength).toBeGreaterThan(0);
 
+    const handoffPath = join(tempDir, created.handoffId, "handoff.json");
+    const handoff = JSON.parse(await readFile(handoffPath, "utf8"));
+    await writeFile(
+      handoffPath,
+      `${JSON.stringify(
+        {
+          ...handoff,
+          itemRecognitionReport: {
+            source: "mixed",
+            shopItems: [],
+            backpackItems: [],
+            uncertainFields: ["shopItems.0.name"],
+            warnings: [],
+            candidateOptionsByField: {},
+            matches: [
+              {
+                region: "shop",
+                slot: "top-right",
+                field: "shopItems.0.name",
+                crop: { x: 10, y: 12, width: 80, height: 70 },
+                accepted: false,
+                candidates: [],
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    const cropResponse = await GET(
+      new Request(`http://localhost/api/codex-handoff?id=${created.handoffId}&asset=crop&field=shopItems.0.name`),
+    );
+    const cropBytes = Buffer.from(await cropResponse.arrayBuffer());
+    const cropMetadata = await sharp(cropBytes).metadata();
+
+    expect(cropResponse.status).toBe(200);
+    expect(cropResponse.headers.get("content-type")).toBe("image/png");
+    expect(cropMetadata.width).toBeGreaterThan(0);
+    expect(cropMetadata.height).toBeGreaterThan(0);
+
+    await writeFile(handoffPath, `${JSON.stringify(handoff, null, 2)}\n`, "utf8");
     await writeFile(created.resultPath, `${JSON.stringify({ gameState })}\n`, "utf8");
 
     const completeResponse = await GET(new Request(`http://localhost/api/codex-handoff?id=${created.handoffId}`));
