@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnalysisStatePanel } from "@/components/AnalysisStatePanel";
 import { CorrectionPanel } from "@/components/CorrectionPanel";
 import { HandoffPanel, type CodexHandoffState } from "@/components/HandoffPanel";
+import { HandoffResumePanel } from "@/components/HandoffResumePanel";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { RecommendationPanel } from "@/components/RecommendationPanel";
 import { ScreenshotIntake } from "@/components/ScreenshotIntake";
@@ -22,6 +23,7 @@ export default function HomePage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mode, setMode] = useState<AnalysisMode>("api");
   const [handoff, setHandoff] = useState<CodexHandoffState | null>(null);
+  const [handoffIdInput, setHandoffIdInput] = useState("");
   const previewUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -115,6 +117,44 @@ export default function HomePage() {
     }
 
     void createCodexHandoff();
+  }
+
+  async function resumeCodexHandoff() {
+    const handoffId = handoffIdInput.trim();
+    if (!handoffId) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/codex-handoff?id=${encodeURIComponent(handoffId)}`);
+      const json = await response.json();
+      if (!response.ok) {
+        throw new Error(json.error ?? "Codex handoff resume failed");
+      }
+
+      setHandoff({
+        handoffId: json.handoffId,
+        status: json.status,
+        prompt: json.prompt,
+        promptPath: json.promptPath,
+        resultPath: json.resultPath,
+        screenshotPath: json.screenshotPath,
+      });
+      setCorrections({});
+
+      if (json.status === "complete") {
+        setResult(json.result);
+      } else {
+        setResult(null);
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Codex handoff resume failed");
+    } finally {
+      setBusy(false);
+    }
   }
 
   function submitCorrections() {
@@ -218,6 +258,14 @@ export default function HomePage() {
         onFile={handleFile}
         onModeChange={setMode}
       />
+      {mode === "codex" ? (
+        <HandoffResumePanel
+          busy={busy}
+          handoffId={handoffIdInput}
+          onHandoffIdChange={setHandoffIdInput}
+          onResume={() => void resumeCodexHandoff()}
+        />
+      ) : null}
       {error ? <section className="panel error-panel">{error}</section> : null}
       <HandoffPanel handoff={handoff} />
       <AnalysisStatePanel result={result} />

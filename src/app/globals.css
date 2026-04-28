@@ -257,6 +257,21 @@ select {
   color: var(--text);
 }
 
+input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 0 10px;
+}
+
+.resume-panel {
+  display: grid;
+  gap: 10px;
+}
+
 .lead-text {
   margin: 0 0 12px;
   color: var(--text);

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readFile } from "node:fs/promises";
 import { analyzeCorrectedState } from "@/lib/analysis/analyze";
 import { readBpbCache } from "@/lib/bpb/store";
 import { AnalysisResultSchema } from "@/lib/core/schemas";
@@ -49,13 +50,19 @@ export async function GET(request: Request) {
   try {
     const handoff = await readCodexHandoff(handoffId);
     const handoffResult = await readCodexHandoffResult(handoffId);
+    const prompt = await readFile(handoff.promptPath, "utf8");
+    const handoffMetadata = {
+      handoffId,
+      prompt,
+      promptPath: handoff.promptPath,
+      resultPath: handoff.resultPath,
+      screenshotPath: handoff.screenshotPath,
+    };
 
     if (handoffResult.status === "pending") {
       return NextResponse.json({
         status: "pending",
-        handoffId,
-        promptPath: handoff.promptPath,
-        resultPath: handoff.resultPath,
+        ...handoffMetadata,
       });
     }
 
@@ -69,7 +76,7 @@ export async function GET(request: Request) {
       }),
     );
 
-    return NextResponse.json({ status: "complete", handoffId, result });
+    return NextResponse.json({ status: "complete", ...handoffMetadata, result });
   } catch (error) {
     const status = (error as NodeJS.ErrnoException).code === "ENOENT" ? 404 : 500;
     return NextResponse.json(

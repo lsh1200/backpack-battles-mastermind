@@ -78,6 +78,10 @@ describe("Codex handoff API", () => {
     const complete = await completeResponse.json();
 
     expect(complete.status).toBe("complete");
+    expect(complete.prompt).toContain("Use view_image on this screenshot");
+    expect(complete.promptPath).toBe(created.promptPath);
+    expect(complete.resultPath).toBe(created.resultPath);
+    expect(complete.screenshotPath).toBe(created.screenshotPath);
     expect(complete.result.gameState.className).toBe("Ranger");
     expect(complete.result.recommendation).not.toBeNull();
   });
