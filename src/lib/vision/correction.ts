@@ -164,3 +164,19 @@ export function applyCorrections(gameState: GameState, corrections: Record<strin
     uncertainFields: gameState.uncertainFields.filter((field) => !appliedFields.has(field)),
   };
 }
+
+export function applyValidationCorrections(
+  validation: ValidationReport,
+  corrections: Record<string, string>,
+): ValidationReport {
+  const confirmedFields = new Set(
+    Object.entries(corrections)
+      .filter(([, value]) => value === "Correct")
+      .map(([field]) => field),
+  );
+
+  return {
+    ...validation,
+    requiresConfirmation: validation.requiresConfirmation.filter((field) => !confirmedFields.has(field)),
+  };
+}

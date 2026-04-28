@@ -456,20 +456,35 @@ function mergeBackpackItems(
   });
 }
 
+function fieldExistsInGameState(gameState: GameState, field: string): boolean {
+  const match = field.match(/^(shopItems|backpackItems)\.(\d+)\.name$/);
+  if (!match) {
+    return true;
+  }
+
+  const [, collection, indexText] = match;
+  const index = Number(indexText);
+
+  return collection === "shopItems" ? index < gameState.shopItems.length : index < gameState.backpackItems.length;
+}
+
 export function applyItemRecognitionToGameState(gameState: GameState, report: ItemRecognitionReport | null): GameState {
   if (report === null || report.matches.length === 0) {
     return gameState;
   }
 
   const recognizedFields = new Set(report.matches.filter((match) => match.accepted).map((match) => match.field));
-
-  return {
+  const mergedState = {
     ...gameState,
     shopItems: mergeShopItems(gameState.shopItems, report.shopItems, recognizedFields),
     backpackItems: mergeBackpackItems(gameState.backpackItems, report.backpackItems, recognizedFields),
+  };
+
+  return {
+    ...mergedState,
     uncertainFields: uniqueStrings([
       ...gameState.uncertainFields.filter((field) => !recognizedFields.has(field)),
       ...report.uncertainFields,
-    ]),
+    ]).filter((field) => fieldExistsInGameState(mergedState, field)),
   };
 }

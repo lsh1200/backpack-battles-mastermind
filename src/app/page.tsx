@@ -9,8 +9,8 @@ import { HistoryPanel } from "@/components/HistoryPanel";
 import { RecommendationPanel } from "@/components/RecommendationPanel";
 import { ScreenshotIntake } from "@/components/ScreenshotIntake";
 import { codexHandoffScreenshotUrl, codexHandoffStatusUrl } from "@/lib/codex-handoff/client";
-import type { AnalysisResult } from "@/lib/core/types";
-import { applyCorrections } from "@/lib/vision/correction";
+import type { AnalysisResult, ValidationReport } from "@/lib/core/types";
+import { applyCorrections, applyValidationCorrections } from "@/lib/vision/correction";
 
 type AnalysisMode = "api" | "codex";
 
@@ -45,8 +45,8 @@ export default function HomePage() {
     }
   }
 
-  async function analyzeWithApi(correctedState?: unknown) {
-    if (!file) {
+  async function analyzeWithApi(correctedState?: unknown, correctedValidation?: ValidationReport) {
+    if (!file && !correctedState) {
       return;
     }
 
@@ -55,9 +55,15 @@ export default function HomePage() {
 
     try {
       const form = new FormData();
-      form.append("screenshot", file);
+      if (file) {
+        form.append("screenshot", file);
+      }
       if (correctedState) {
+        const validationForRequest = correctedValidation ?? (!file ? result?.validation : undefined);
         form.append("correctedState", JSON.stringify(correctedState));
+        if (validationForRequest) {
+          form.append("validation", JSON.stringify(validationForRequest));
+        }
       }
 
       const response = await fetch("/api/analyze", { method: "POST", body: form });
@@ -111,9 +117,9 @@ export default function HomePage() {
     }
   }
 
-  function analyze(correctedState?: unknown) {
+  function analyze(correctedState?: unknown, correctedValidation?: ValidationReport) {
     if (correctedState || mode === "api") {
-      void analyzeWithApi(correctedState);
+      void analyzeWithApi(correctedState, correctedValidation);
       return;
     }
 
@@ -170,7 +176,7 @@ export default function HomePage() {
       return;
     }
 
-    analyze(applyCorrections(result.gameState, corrections));
+    analyze(applyCorrections(result.gameState, corrections), applyValidationCorrections(result.validation, corrections));
   }
 
   useEffect(() => {

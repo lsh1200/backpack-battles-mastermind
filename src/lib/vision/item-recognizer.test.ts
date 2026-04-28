@@ -243,6 +243,6 @@ describe("deterministic item recognizer", () => {
     );
 
     expect(merged.backpackItems).toEqual([{ name: "Lucky Clover", location: "bag", x: 2, y: 2 }]);
-    expect(merged.uncertainFields).toEqual(["backpackItems.0.name", "backpackItems.1.name"]);
+    expect(merged.uncertainFields).toEqual(["backpackItems.0.name"]);
   });
 });

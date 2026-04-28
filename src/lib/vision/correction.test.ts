@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { GameState, ValidationReport } from "@/lib/core/types";
 import { CorrectionQuestionSchema, GameStateSchema } from "@/lib/core/schemas";
-import { applyCorrections, buildCorrectionQuestions } from "./correction";
+import { applyCorrections, applyValidationCorrections, buildCorrectionQuestions } from "./correction";
 
 const state: GameState = {
   round: null,
@@ -183,6 +183,21 @@ describe("correction loop", () => {
     expect(corrected.shopItems[0]?.name).toBe("Broom");
     expect(corrected.uncertainFields).toEqual(["round", "shopItems.9.name"]);
     expect(() => GameStateSchema.parse(corrected)).not.toThrow();
+  });
+
+  it("clears validation confirmations that the user marked correct", () => {
+    const correctedValidation = applyValidationCorrections(
+      {
+        ...validation,
+        requiresConfirmation: ["screenshotQuality", "className"],
+      },
+      {
+        screenshotQuality: "Correct",
+        className: "Ranger",
+      },
+    );
+
+    expect(correctedValidation.requiresConfirmation).toEqual(["className"]);
   });
 
   it("does not mutate the original game state", () => {
