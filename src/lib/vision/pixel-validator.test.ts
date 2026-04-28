@@ -107,6 +107,24 @@ describe("validateScreenshotPixels", () => {
     expect(grid?.cellWidth).toBeCloseTo(14, 0);
   });
 
+  it("anchors the full inventory grid instead of the brighter visible bag cluster", async () => {
+    const image = await readFile("data/grid-guides/round1-full-inventory-anchor.jpg");
+
+    const report = await validateScreenshotPixels(image);
+    const grid = report.regions.find((region) => region.name === "inventoryGrid");
+
+    expect(grid).toEqual(
+      expect.objectContaining({
+        columns: 9,
+        rows: 7,
+        source: "detected-grid",
+      }),
+    );
+    expect(grid?.x).toBeCloseTo(134, 0);
+    expect(grid?.y).toBeCloseTo(26, 0);
+    expect(grid?.cellWidth).toBeCloseTo(46, 0);
+  });
+
   it("asks for a clearer screenshot when the image is too small", async () => {
     const image = await sharp({
       create: {

@@ -49,6 +49,14 @@ function gridScore(plane: ImagePlane, x: number, y: number, cellSize: number): n
   return score;
 }
 
+function fullInventoryOrigin(best: { x: number; y: number; cellSize: number }, plane: ImagePlane): { x: number; y: number } {
+  const clusterLikeOrigin = best.x >= best.cellSize && best.y >= best.cellSize * 2 && best.y > plane.height * 0.16;
+
+  return clusterLikeOrigin
+    ? { x: best.x - best.cellSize, y: best.y - best.cellSize * 2 }
+    : { x: best.x, y: best.y };
+}
+
 async function detectInventoryGrid(image: Buffer, width: number, height: number): Promise<ValidationReport["regions"][number]> {
   const scale = Math.min(1, DETECTION_WIDTH / width);
   const detectionWidth = Math.max(1, Math.round(width * scale));
@@ -86,11 +94,12 @@ async function detectInventoryGrid(image: Buffer, width: number, height: number)
   const inverseScale = 1 / scale;
   const cellWidth = best.cellSize * inverseScale;
   const cellHeight = best.cellSize * inverseScale;
+  const origin = fullInventoryOrigin(best, plane);
 
   return {
     name: "inventoryGrid",
-    x: best.x * inverseScale,
-    y: best.y * inverseScale,
+    x: origin.x * inverseScale,
+    y: origin.y * inverseScale,
     width: BPB_GRID_COLUMNS * cellWidth,
     height: BPB_GRID_ROWS * cellHeight,
     columns: BPB_GRID_COLUMNS,
