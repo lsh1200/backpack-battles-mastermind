@@ -18,6 +18,38 @@ const bpbCache: BpbCache = {
       tags: [],
     },
     {
+      id: 0,
+      name: "Stone",
+      aliases: ["stone"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/Stone.webp",
+      grounded: true,
+      tags: [],
+    },
+    {
+      id: 5,
+      name: "Banana",
+      aliases: ["banana"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/Banana.webp",
+      grounded: true,
+      tags: [],
+    },
+    {
+      id: 275,
+      name: "Shiny Shell",
+      aliases: ["shiny shell", "shinyshell"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/ShinyShell.webp",
+      grounded: true,
+      tags: [],
+    },
+    {
+      id: 8,
+      name: "Walrus Tusk",
+      aliases: ["walrus tusk", "walrustusk"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/WalrusTusk.webp",
+      grounded: true,
+      tags: [],
+    },
+    {
       id: 51,
       name: "Whetstone",
       aliases: ["whetstone"],
@@ -77,6 +109,34 @@ describe("recommendNextAction", () => {
     expect(recommendation.bestAction.type).toBe("buy");
     expect(recommendation.bestAction.target).toContain("Broom");
     expect(recommendation.shortReason).toContain("sale");
+  });
+
+  it("recommends a round-one buy package when multiple grounded commons are affordable", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        round: 1,
+        gold: 13,
+        backpackItems: [
+          { name: "Ranger Bag", location: "bag" },
+          { name: "Wooden Sword", location: "bag" },
+          { name: "Lucky Clover", location: "bag" },
+        ],
+        shopItems: [
+          { name: "Stone", slot: "top-right", sale: false, price: 1 },
+          { name: "Banana", slot: "middle-left", sale: false, price: 3 },
+          { name: "Shiny Shell", slot: "middle-right", sale: true, price: 1 },
+          { name: "Broom", slot: "bottom-center", sale: false, price: 4 },
+          { name: "Walrus Tusk", slot: "bottom-right", sale: false, price: 4 },
+        ],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.bestAction.type).toBe("buy");
+    expect(recommendation.bestAction.target).toBe("Broom, Banana, Stone, Shiny Shell, Walrus Tusk");
+    expect(recommendation.shortReason).toContain("shopping sequence");
+    expect(recommendation.bestAction.teachingReason).toContain("uses all 13 gold");
   });
 
   it("does not recommend buying a sale item the player cannot afford", () => {

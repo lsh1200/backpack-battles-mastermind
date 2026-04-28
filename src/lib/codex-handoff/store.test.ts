@@ -88,6 +88,8 @@ describe("Codex handoff store", () => {
     await expect(readFile(handoff.screenshotPath, "utf8")).resolves.toBe("fake image");
     await expect(readFile(handoff.promptPath, "utf8")).resolves.toContain("Use view_image on this screenshot");
     expect(handoff.prompt).toContain("Broom");
+    expect(handoff.prompt).toContain("Locate the Shop and Inventory labels first");
+    expect(handoff.prompt).toContain("Sale labels and price tags are not items");
     expect(handoff.resultPath.endsWith("result.json")).toBe(true);
   });
 

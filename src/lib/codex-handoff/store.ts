@@ -81,6 +81,8 @@ function buildPrompt(input: {
     input.screenshotPath,
     "",
     "Read the Backpack Battles Android screenshot and produce only a GameState JSON object.",
+    "Locate the Shop and Inventory labels first, then read item sprites by their positions relative to those anchors.",
+    "Sale labels and price tags are not items; attach them as sale/price metadata to the nearby item sprite.",
     "If you are unsure about a field, use a plausible value and include that field path in uncertainFields.",
     "Use local BPB item names from the grounded list when possible. Do not invent item facts.",
     "",

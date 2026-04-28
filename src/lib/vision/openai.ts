@@ -69,6 +69,8 @@ function buildVisionRequest(input: ExtractInput, model: string): VisionRequest {
             text: [
               "Analyze this Backpack Battles shop screenshot.",
               "Return only JSON matching the GameState shape.",
+              "Locate the Shop and Inventory labels first, then read item sprites by their positions relative to those anchors.",
+              "Sale labels and price tags are not items; attach them as sale/price metadata to the nearby item sprite.",
               "Use these grounded BPB item names when possible:",
               itemNames || "No local items were provided.",
               "Use uncertainFields for any class, gold, round, item, or location you are not confident about.",

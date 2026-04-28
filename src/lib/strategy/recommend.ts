@@ -9,6 +9,8 @@ type RecommendInput = {
   correctionPromptsUsed: string[];
 };
 
+const EARLY_SHOP_PACKAGE_PRIORITY = ["Broom", "Banana", "Stone", "Shiny Shell", "Walrus Tusk"];
+
 function hasGroundedItem(cache: BpbCache | null, itemName: string): boolean {
   if (cache === null) {
     return false;
@@ -68,6 +70,45 @@ function buyAction(item: ShopItem, value: number, teachingReason: string): Candi
   };
 }
 
+function earlyShopPackageAction(gameState: GameState, bpbCache: BpbCache | null): CandidateAction | null {
+  if ((gameState.round ?? 99) > 2 || gameState.gold === null) {
+    return null;
+  }
+
+  let remainingGold = gameState.gold;
+  const packageItems: ShopItem[] = [];
+
+  for (const itemName of EARLY_SHOP_PACKAGE_PRIORITY) {
+    const item = gameState.shopItems.find(
+      (shopItem) => shopItem.name === itemName && hasGroundedItem(bpbCache, shopItem.name),
+    );
+    if (item?.price === undefined || item.price > remainingGold) {
+      continue;
+    }
+
+    packageItems.push(item);
+    remainingGold -= item.price;
+  }
+
+  if (packageItems.length < 2) {
+    return null;
+  }
+
+  const target = packageItems.map((item) => item.name).join(", ");
+  const spentGold = gameState.gold - remainingGold;
+  const spendText =
+    remainingGold === 0 ? `uses all ${spentGold} gold` : `uses ${spentGold} of your ${gameState.gold} gold`;
+
+  return {
+    type: "buy",
+    target,
+    value: 95,
+    risks: ["Check backpack space before buying every piece; put extras in storage if needed."],
+    assumptions: [],
+    teachingReason: `Buy ${target}: this round-one shopping sequence ${spendText} to add a second weapon, stamina support, and cheap tempo pieces.`,
+  };
+}
+
 function ungroundedItemAssumptions(gameState: GameState, bpbCache: BpbCache | null): string[] {
   return [...gameState.shopItems, ...gameState.backpackItems, ...gameState.storageItems]
     .filter((item) => !hasGroundedItem(bpbCache, item.name))
@@ -97,6 +138,19 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
       };
     });
   const planSupported = planForClass(gameState, bpbCache);
+  const earlyPackageAction = earlyShopPackageAction(gameState, bpbCache);
+
+  if (earlyPackageAction) {
+    return {
+      bestAction: earlyPackageAction,
+      shortReason: `Buy this shopping sequence now: ${earlyPackageAction.target}. It spends your early gold on grounded tempo instead of over-rolling.`,
+      rejectedAlternatives,
+      planSupported,
+      nextTargets: ["Place Broom as a second weapon.", "Keep Banana near the bag plan for stamina support.", "Use cheap pieces for tempo, then start battle."],
+      assumptionsMade,
+      correctionPromptsUsed,
+    };
+  }
 
   const saleItem = gameState.shopItems.find(
     (item) => item.sale && canAfford(item, gameState.gold) && hasGroundedItem(bpbCache, item.name),

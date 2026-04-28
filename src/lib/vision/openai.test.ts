@@ -107,6 +107,22 @@ describe("OpenAI vision helpers", () => {
     expect(text).not.toContain("Mystery Blade");
   });
 
+  it("tells vision to use shop and inventory anchors instead of treating labels as items", async () => {
+    const calls: VisionRequest[] = [];
+
+    await extractGameStateWithVision({
+      image: Buffer.from("abc"),
+      mimeType: "image/png",
+      relevantItems: [broom],
+      client: mockClient(calls),
+    });
+
+    const text = calls[0]?.input[0]?.content.find((part) => part.type === "input_text")?.text ?? "";
+    expect(text).toContain("Shop");
+    expect(text).toContain("Inventory");
+    expect(text).toContain("Sale labels and price tags are not items");
+  });
+
   it("uses the model environment override and default model with injected clients", async () => {
     const originalModel = process.env.OPENAI_VISION_MODEL;
     const envCalls: VisionRequest[] = [];
