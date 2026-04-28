@@ -1,83 +1,61 @@
-# Backpack Battles Mastermind - Codex Handoff
+# Backpack Battles Mastermind - Codex Start Note
 
-Start here:
+Start here every session:
 
-1. Read the approved design: `docs/superpowers/specs/2026-04-27-backpack-battles-mastermind-design.md`
-2. Continue the implementation plan: `docs/superpowers/plans/2026-04-27-backpack-battles-mastermind.md`
-3. Resume from **Task 10: Build Phone-First Coaching UI**.
+1. Read `docs/ACTIVE_TODO.md`.
+2. Work only on the first task marked `ready` or `in_progress`.
+3. Use the approved design for product context: `docs/superpowers/specs/2026-04-27-backpack-battles-mastermind-design.md`.
+4. Use the original implementation plan for historical context: `docs/superpowers/plans/2026-04-27-backpack-battles-mastermind.md`.
+5. Do not skip ahead to backlog items unless the active task is blocked and the user approves the change in priority.
 
 ## Current State
 
 - GitHub remote: `https://github.com/lsh1200/backpack-battles-mastermind`
-- Active branch to continue: `codex/task-1-scaffold`
-- Latest completed commit before this handoff: `9453b73 feat: add analysis API pipeline`
-- Local worktree used for this run: `C:\Users\Admin\.config\superpowers\worktrees\backpack-battles-mastermind\codex-task-1-scaffold`
-- Original local checkout may be at `C:\VSC\backpack-battles-mastermind`, but the completed code is on the branch above.
+- Active branch / PR branch: `codex/task-1-scaffold`
+- Latest app-feature commit before active todo setup: `cfb2292 feat: add placement advice to recommendations`
+- Current active task: `Task 11: Layout-Aware Placement Optimizer v1` in `docs/ACTIVE_TODO.md`
+- Useful manual handoff ID: `9592748f-55a7-4749-908d-1f24df8cb788`
 
-## Completed Implementation Plan Tasks
+## Project Goal
 
-Tasks 1-9 are complete on `codex/task-1-scaffold`:
+Build a phone-friendly Backpack Battles coach for Android screenshots. The coach should read the current round, identify the board/shop state, ground item facts in local BPB data, ask for confirmations when uncertain, and explain the best action plus the best placement so Henry can learn quickly.
 
-- `86b6291 feat: scaffold mastermind app`
-- `1a54339 feat: add core analysis schemas`
-- `6a77753 feat: add BPB local data cache`
-- `bf531fc feat: add BPB detail enrichment guard`
-- `7f81312 feat: add grounded beginner recommendations`
-- `b1ce254 feat: add screenshot pixel validation`
-- `36d6f1d feat: add targeted correction loop`
-- `1a1ab67 feat: add vision extraction client`
-- `9453b73 feat: add analysis API pipeline`
+## Architecture Guardrails
 
-Task 9 added:
+- Architecture: LLM vision + deterministic pixel checks + local BPB item/build cache + targeted correction loop + layout-aware placement optimizer.
+- Accuracy priority: do not let the LLM invent item facts. Ground item-specific advice in local BPB data.
+- If exact board layout is uncertain, ask for confirmation instead of pretending.
+- Prefer small, testable changes and small commits.
+- Use TDD for behavior changes.
 
-- `src/lib/analysis/analyze.ts` and tests
-- `src/lib/fixtures/store.ts`
-- `src/app/api/analyze/route.ts`
-- `src/app/api/bpb/refresh/route.ts`
-- `src/app/api/fixtures/route.ts`
+## Important Resources
 
-## Last Verification
+- Source transcript: `Default_Backpack Battles 101! Beginner & Interme.txt`
+- BPB source: `https://bpb-builds.vercel.app/`
+- Current active todo: `docs/ACTIVE_TODO.md`
+- Approved design: `docs/superpowers/specs/2026-04-27-backpack-battles-mastermind-design.md`
+- Original implementation plan: `docs/superpowers/plans/2026-04-27-backpack-battles-mastermind.md`
 
-After Task 9, these passed locally:
+## Session Boot Commands
 
-- `npm run test` - 10 test files, 55 tests
-- `npm run lint`
-- `npx tsc --noEmit -p tsconfig.json`
-- `npm run build`
-
-Note: Task 9 was locally verified and committed for handoff. A final subagent review was skipped after the user requested immediate GitHub handoff.
-
-## Next Work
-
-Continue with **Task 10: Build Phone-First Coaching UI** in `docs/superpowers/plans/2026-04-27-backpack-battles-mastermind.md`.
-
-Expected Task 10 files:
-
-- Modify `src/app/page.tsx`
-- Modify `src/app/globals.css`
-- Create `src/components/ScreenshotIntake.tsx`
-- Create `src/components/AnalysisStatePanel.tsx`
-- Create `src/components/CorrectionPanel.tsx`
-- Create `src/components/RecommendationPanel.tsx`
-- Create `src/components/HistoryPanel.tsx`
-
-Before starting Task 10 on another machine:
+Before starting code work on another machine:
 
 ```powershell
 git fetch origin
 git checkout codex/task-1-scaffold
 npm install
-npm run test
-npm run lint
-npx tsc --noEmit -p tsconfig.json
-npm run build
+npm.cmd run test
+npm.cmd run lint
+npx.cmd tsc --noEmit -p tsconfig.json
+npm.cmd run build
 ```
 
-## Project Guardrails
+## Drift Control
 
-- Goal: a phone-friendly Backpack Battles coach for Android screenshots.
-- Architecture: LLM vision + deterministic pixel checks + local BPB item/build cache + targeted correction loop.
-- Accuracy priority: do not let the LLM invent item facts. Ground item-specific advice in local BPB data.
-- Source transcript: `Default_Backpack Battles 101! Beginner & Interme.txt`
-- BPB source: `https://bpb-builds.vercel.app/`
-- Follow the plan task-by-task, keep commits small, and run the task verification commands before claiming completion.
+When the user reports a bug or requests a feature:
+
+1. Check whether it belongs to the active task in `docs/ACTIVE_TODO.md`.
+2. If yes, handle it inside the active task.
+3. If no, add it to the backlog in `docs/ACTIVE_TODO.md`.
+4. If it blocks the active task, add it under `Blockers`, fix only the blocker, then return to the active task.
+5. Before claiming completion, run the active task's verification commands and record the commit hash in `docs/ACTIVE_TODO.md`.
