@@ -4,18 +4,61 @@ const CLASS_OPTIONS = ["Ranger", "Reaper", "Berserker", "Pyromancer", "Mage", "A
 const MANUAL_OPTIONS = ["Correct", "Needs manual edit"];
 const UNKNOWN_ITEM = "Unknown Item";
 
-function currentItemNameForField(gameState: GameState, field: string): string | undefined {
+type ItemNameField = {
+  collection: "shopItems" | "backpackItems";
+  index: number;
+};
+
+function parseItemNameField(field: string): ItemNameField | undefined {
   const match = field.match(/^(shopItems|backpackItems)\.(\d+)\.name$/);
   if (!match) {
     return undefined;
   }
 
   const [, collection, indexText] = match;
-  const index = Number(indexText);
-  const item = collection === "shopItems" ? gameState.shopItems[index] : gameState.backpackItems[index];
+  return { collection: collection as ItemNameField["collection"], index: Number(indexText) };
+}
+
+function currentItemNameForField(gameState: GameState, field: string): string | undefined {
+  const itemField = parseItemNameField(field);
+  if (!itemField) {
+    return undefined;
+  }
+
+  const item =
+    itemField.collection === "shopItems" ? gameState.shopItems[itemField.index] : gameState.backpackItems[itemField.index];
   const name = item?.name.trim();
 
   return name && name !== UNKNOWN_ITEM ? name : undefined;
+}
+
+function withCurrentRead(question: string, currentItemName: string | undefined): string {
+  return currentItemName ? `${question} Current read: ${currentItemName}.` : question;
+}
+
+function itemQuestionText(gameState: GameState, field: string): string {
+  const itemField = parseItemNameField(field);
+  if (!itemField) {
+    return `Confirm ${field}`;
+  }
+
+  const currentItemName = currentItemNameForField(gameState, field);
+
+  if (itemField.collection === "shopItems") {
+    const item = gameState.shopItems[itemField.index];
+    const slot = item?.slot.trim();
+    const target = slot ? `shop ${slot}` : `shop item ${itemField.index + 1}`;
+
+    return withCurrentRead(`Choose the item in ${target}.`, currentItemName);
+  }
+
+  const item = gameState.backpackItems[itemField.index];
+  const location = item?.location && item.location !== "unknown" ? item.location : undefined;
+  const area = location ? `backpack ${location}` : "backpack";
+  const hasGridPosition = item?.x !== undefined && item.y !== undefined;
+  const target = hasGridPosition ? `${area} grid (${item.x}, ${item.y})` : `${area} item ${itemField.index + 1}`;
+
+  return withCurrentRead(`Choose the item in ${target}.`, currentItemName);
 }
 
 export function buildCorrectionQuestions(
@@ -35,6 +78,14 @@ export function buildCorrectionQuestions(
       };
     }
 
+    if (field === "screenshotQuality") {
+      return {
+        field,
+        question: "Is the screenshot clear enough to read item icons?",
+        options: MANUAL_OPTIONS,
+      };
+    }
+
     if ((field.startsWith("shopItems.") || field.startsWith("backpackItems.")) && field.endsWith(".name")) {
       const candidateOptions = candidateOptionsByField[field] ?? [];
       const currentItemName = currentItemNameForField(gameState, field);
@@ -46,7 +97,7 @@ export function buildCorrectionQuestions(
 
       return {
         field,
-        question: field.startsWith("shopItems.") ? "Which shop item is this?" : "Which backpack item is this?",
+        question: itemQuestionText(gameState, field),
         options: options.length > 0 ? options : ["Needs manual edit"],
       };
     }

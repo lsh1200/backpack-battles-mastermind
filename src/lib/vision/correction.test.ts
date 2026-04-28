@@ -73,6 +73,49 @@ describe("correction loop", () => {
     expect(backpackQuestion?.options.slice(0, 3)).toEqual(["Leather Bag", "Spiked Shield", "Lucky Clover"]);
   });
 
+  it("labels shop item correction questions with their slot and current read", () => {
+    const shopState: GameState = {
+      ...state,
+      shopItems: [{ name: "Stone", slot: "top-right", sale: false, price: 1 }],
+      uncertainFields: ["shopItems.0.name"],
+    };
+    const questions = buildCorrectionQuestions(shopState, validation, ["Stone", "Banana"]);
+    const shopQuestion = questions.find((question) => question.field === "shopItems.0.name");
+
+    expect(shopQuestion?.question).toBe("Choose the item in shop top-right. Current read: Stone.");
+  });
+
+  it("labels backpack item correction questions with their grid position and current read", () => {
+    const backpackState: GameState = {
+      ...state,
+      shopItems: [],
+      backpackItems: [{ name: "Lucky Clover", location: "bag", x: 2, y: 2 }],
+      uncertainFields: ["backpackItems.0.name"],
+    };
+    const questions = buildCorrectionQuestions(backpackState, validation, ["Lucky Clover"]);
+    const backpackQuestion = questions.find((question) => question.field === "backpackItems.0.name");
+
+    expect(backpackQuestion?.question).toBe("Choose the item in backpack bag grid (2, 2). Current read: Lucky Clover.");
+  });
+
+  it("uses plain language for screenshot quality confirmations", () => {
+    const qualityValidation: ValidationReport = {
+      ...validation,
+      requiresConfirmation: ["screenshotQuality"],
+    };
+    const questions = buildCorrectionQuestions(
+      { ...state, uncertainFields: [] },
+      qualityValidation,
+      ["Broom", "Pan"],
+    );
+
+    expect(questions).toContainEqual({
+      field: "screenshotQuality",
+      question: "Is the screenshot clear enough to read item icons?",
+      options: ["Correct", "Needs manual edit"],
+    });
+  });
+
   it("applies class and shop item corrections", () => {
     const corrected = applyCorrections(state, {
       className: "Ranger",
