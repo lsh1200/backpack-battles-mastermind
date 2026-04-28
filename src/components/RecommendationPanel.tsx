@@ -151,6 +151,10 @@ function LayoutOptionCard({ option }: { option: Recommendation["layoutOptions"][
   const maxY = Math.max(2, ...boardCells.map((cell) => cell.y + 1), ...option.cells.map((cell) => cell.y + cell.height));
   const columns = Math.max(2, maxX - minX);
   const rows = Math.max(3, maxY - minY);
+  const activeBoardCellKeys = new Set(boardCells.map((cell) => `${cell.x},${cell.y}`));
+  const displayCells = Array.from({ length: rows }).flatMap((_, y) =>
+    Array.from({ length: columns }).map((__, x) => ({ x: minX + x, y: minY + y })),
+  );
   const gridStyle = {
     "--layout-columns": columns,
     "--layout-rows": rows,
@@ -166,10 +170,10 @@ function LayoutOptionCard({ option }: { option: Recommendation["layoutOptions"][
         <span>{option.score}</span>
       </div>
       <div className="inventory-board" style={gridStyle}>
-        {boardCells.map((cell) => (
+        {displayCells.map((cell) => (
           <span
             aria-hidden="true"
-            className="inventory-board-cell"
+            className={`inventory-board-cell ${activeBoardCellKeys.has(`${cell.x},${cell.y}`) ? "has-bag" : "no-bag"}`}
             key={`${option.id}-board-${cell.x}-${cell.y}`}
             style={{ gridColumn: cell.x - minX + 1, gridRow: cell.y - minY + 1 }}
           />

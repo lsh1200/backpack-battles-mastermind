@@ -105,6 +105,8 @@ describe("RecommendationPanel", () => {
     expect(markup).toContain("Storage for now");
     expect(markup).toContain("Broom footprint");
     expect(markup).toContain("inventory-board");
+    expect(markup).toContain("inventory-board-cell has-bag");
+    expect(markup).toContain("inventory-board-cell no-bag");
     expect(markup).toContain("WoodenSword.webp");
     expect(markup).toContain("Item Recognition");
     expect(markup).toContain("local-first");
