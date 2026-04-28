@@ -1,6 +1,6 @@
 import type { BpbCache } from "@/lib/bpb/schemas";
 import { findBpbItemByName } from "@/lib/bpb/store";
-import type { AnalysisResult, BackpackItem, GameState, ShopItem, ValidationReport } from "@/lib/core/types";
+import type { AnalysisResult, BackpackItem, GameState, Recommendation, ShopItem, ValidationReport } from "@/lib/core/types";
 import { recommendNextAction } from "@/lib/strategy/recommend";
 import { buildCorrectionQuestions } from "@/lib/vision/correction";
 
@@ -9,6 +9,7 @@ type AnalyzeCorrectedStateInput = {
   validation: ValidationReport;
   bpbCache: BpbCache | null;
   correctionPromptsUsed: string[];
+  itemRecognitionSource?: Recommendation["recognitionPolicy"]["itemRecognition"];
 };
 
 function knownGroundedItemNames(bpbCache: BpbCache | null): string[] {
@@ -76,6 +77,11 @@ export async function analyzeCorrectedState(input: AnalyzeCorrectedStateInput): 
     gameState: groundedState,
     validation,
     correctionQuestions: [],
-    recommendation: recommendNextAction({ gameState: groundedState, bpbCache, correctionPromptsUsed }),
+    recommendation: recommendNextAction({
+      gameState: groundedState,
+      bpbCache,
+      correctionPromptsUsed,
+      itemRecognitionSource: input.itemRecognitionSource,
+    }),
   };
 }

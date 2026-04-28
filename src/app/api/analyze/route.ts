@@ -18,7 +18,8 @@ export async function POST(request: Request) {
 
     const image = Buffer.from(await file.arrayBuffer());
     const [bpbCache, validation] = await Promise.all([readBpbCache(), validateScreenshotPixels(image)]);
-    const gameState = correctedState
+    const hasCorrectedState = typeof correctedState === "string" && correctedState.trim().length > 0;
+    const gameState = hasCorrectedState
       ? GameStateSchema.parse(JSON.parse(String(correctedState)))
       : await extractGameStateWithVision({
           image,
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
         validation,
         bpbCache,
         correctionPromptsUsed: [],
+        itemRecognitionSource: hasCorrectedState ? "user-confirmed" : "llm-fallback",
       }),
     );
 

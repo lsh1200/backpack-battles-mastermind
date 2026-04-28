@@ -67,8 +67,10 @@ function buildVisionRequest(input: ExtractInput, model: string): VisionRequest {
           {
             type: "input_text",
             text: [
-              "Analyze this Backpack Battles shop screenshot.",
+              "Audit this Backpack Battles shop screenshot for a local-first recognizer.",
               "Return only JSON matching the GameState shape.",
+              "Do not identify item names by raw visual guessing. The local BPB item list and user corrections are the authority for item identity.",
+              "Treat LLM fallback item reads as provisional: if a sprite cannot be matched to a local BPB item, use Unknown Item and add the field path to uncertainFields.",
               "Locate the Shop and Inventory labels first, then read item sprites by their positions relative to those anchors.",
               "Sale labels and price tags are not items; attach them as sale/price metadata to the nearby item sprite.",
               "Use these grounded BPB item names when possible:",

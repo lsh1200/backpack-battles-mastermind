@@ -90,6 +90,8 @@ describe("Codex handoff store", () => {
     expect(handoff.prompt).toContain("Broom");
     expect(handoff.prompt).toContain("Locate the Shop and Inventory labels first");
     expect(handoff.prompt).toContain("Sale labels and price tags are not items");
+    expect(handoff.prompt).toContain("Do not identify item names by raw visual guessing");
+    expect(handoff.prompt).toContain("This Codex handoff is an LLM fallback");
     expect(handoff.resultPath.endsWith("result.json")).toBe(true);
   });
 

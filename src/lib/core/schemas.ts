@@ -70,12 +70,46 @@ export const CandidateActionSchema = z.object({
   teachingReason: z.string(),
 });
 
+export const LayoutConfidenceSchema = z.enum(["not-considered", "needs-confirmation", "considered"]);
+
+export const RecognitionPolicySchema = z.object({
+  itemRecognition: z.enum(["local-first", "user-confirmed", "llm-fallback", "mixed"]),
+  summary: z.string().min(1),
+  warnings: z.array(z.string()).default([]),
+});
+
+export const LayoutCellSchema = z.object({
+  item: z.string().min(1),
+  x: z.number().int().nonnegative(),
+  y: z.number().int().nonnegative(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  role: z.string().min(1).optional(),
+});
+
+export const LayoutOptionSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  score: z.number().int().min(0).max(100),
+  summary: z.string().min(1),
+  moves: z.array(z.string().min(1)),
+  tradeoffs: z.array(z.string().min(1)),
+  cells: z.array(LayoutCellSchema),
+});
+
 export const RecommendationSchema = z.object({
   bestAction: CandidateActionSchema,
   shortReason: z.string().min(1),
   rejectedAlternatives: z.array(CandidateActionSchema),
   planSupported: z.string().min(1),
   placementAdvice: z.array(z.string().min(1)).default([]),
+  layoutConfidence: LayoutConfidenceSchema.default("not-considered"),
+  recognitionPolicy: RecognitionPolicySchema.default({
+    itemRecognition: "mixed",
+    summary: "Item recognition provenance was not provided; treat item-specific advice as needing confirmation.",
+    warnings: [],
+  }),
+  layoutOptions: z.array(LayoutOptionSchema).default([]),
   nextTargets: z.array(z.string()),
   assumptionsMade: z.array(z.string()),
   correctionPromptsUsed: z.array(z.string()),

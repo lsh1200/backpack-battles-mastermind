@@ -19,6 +19,35 @@ const recommendation = {
     "Keep Wooden Sword active and place Broom as the second weapon, not in storage.",
     "Put Stone adjacent to Wooden Sword or Broom so it contributes damage immediately.",
   ],
+  layoutConfidence: "considered",
+  recognitionPolicy: {
+    itemRecognition: "local-first",
+    summary: "Item names are grounded against local BPB data before recommendation.",
+    warnings: [],
+  },
+  layoutOptions: [
+    {
+      id: "tempo-weapons",
+      title: "Tempo Weapons",
+      score: 92,
+      summary: "Prioritizes two active weapons.",
+      moves: ["Keep Wooden Sword at (1, 1).", "Place Broom at (2, 1) as your second active weapon."],
+      tradeoffs: ["Less flexible utility space."],
+      cells: [
+        { item: "Wooden Sword", x: 1, y: 1, width: 1, height: 1, role: "primary weapon" },
+        { item: "Broom", x: 2, y: 1, width: 1, height: 1, role: "second weapon" },
+      ],
+    },
+    {
+      id: "stamina-safe",
+      title: "Stamina Safe",
+      score: 86,
+      summary: "Keeps Banana safer.",
+      moves: ["Place Banana at (0, 2)."],
+      tradeoffs: ["Slightly less weapon adjacency."],
+      cells: [{ item: "Banana", x: 0, y: 2, width: 1, height: 1, role: "stamina support" }],
+    },
+  ],
   nextTargets: ["Start battle after arranging the board."],
   assumptionsMade: [],
   correctionPromptsUsed: [],
@@ -31,5 +60,13 @@ describe("RecommendationPanel", () => {
     expect(markup).toContain("<h3>Placement</h3>");
     expect(markup).toContain("Keep Wooden Sword active and place Broom as the second weapon, not in storage.");
     expect(markup).toContain("Put Stone adjacent to Wooden Sword or Broom so it contributes damage immediately.");
+    expect(markup).toContain("<h3>Layout Confidence</h3>");
+    expect(markup).toContain("Considered");
+    expect(markup).toContain("Tempo Weapons");
+    expect(markup).toContain("Stamina Safe");
+    expect(markup).toContain("Wooden Sword");
+    expect(markup).toContain("Broom");
+    expect(markup).toContain("Item Recognition");
+    expect(markup).toContain("local-first");
   });
 });

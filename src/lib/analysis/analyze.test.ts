@@ -104,4 +104,20 @@ describe("analysis orchestrator", () => {
     expect(result.recommendation?.correctionPromptsUsed).toEqual(["className"]);
     expect(() => AnalysisResultSchema.parse(result)).not.toThrow();
   });
+
+  it("passes recognition provenance into the recommendation", async () => {
+    const result = await analyzeCorrectedState({
+      gameState: baseGameState({
+        shopItems: [{ name: "Broom", slot: "shop-1", sale: true, price: 3 }],
+        backpackItems: [{ name: "Hero Sword", location: "bag" }],
+      }),
+      validation,
+      bpbCache: cache,
+      correctionPromptsUsed: ["codex-test-mode"],
+      itemRecognitionSource: "llm-fallback",
+    });
+
+    expect(result.recommendation?.recognitionPolicy.itemRecognition).toBe("llm-fallback");
+    expect(result.recommendation?.recognitionPolicy.summary).toContain("LLM fallback");
+  });
 });

@@ -137,12 +137,41 @@ describe("recommendNextAction", () => {
     expect(recommendation.bestAction.target).toBe("Broom, Banana, Stone, Shiny Shell, Walrus Tusk");
     expect(recommendation.shortReason).toContain("shopping sequence");
     expect(recommendation.bestAction.teachingReason).toContain("uses all 13 gold");
+    expect(recommendation.layoutConfidence).toBe("needs-confirmation");
+    expect(recommendation.recognitionPolicy.itemRecognition).toBe("mixed");
+    expect(recommendation.layoutOptions).toHaveLength(2);
+    expect(recommendation.layoutOptions[0].cells.map((cell) => cell.item)).toContain("Broom");
     expect(recommendation.placementAdvice).toEqual([
-      "Keep Wooden Sword active and place Broom as the second weapon, not in storage.",
-      "Put Stone adjacent to Wooden Sword or Broom so it contributes damage immediately.",
-      "Place Banana where it supports stamina without blocking weapon adjacency.",
-      "Fit Shiny Shell and Walrus Tusk only after the weapon and stamina layout is stable.",
+      "Layout confidence is low because current bag coordinates are missing; confirm current item positions before treating this as exact.",
+      "Option 1 keeps Wooden Sword and Broom as active weapons, with Stone touching a weapon.",
+      "Option 2 gives Banana a safer support position first, then fits damage/utility pieces around the weapons.",
     ]);
+  });
+
+  it("marks the layout considered when backpack coordinates are available", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        round: 1,
+        gold: 13,
+        backpackItems: [
+          { name: "Ranger Bag", location: "bag", x: 0, y: 0 },
+          { name: "Wooden Sword", location: "bag", x: 1, y: 1 },
+          { name: "Lucky Clover", location: "bag", x: 0, y: 2 },
+        ],
+        shopItems: [
+          { name: "Stone", slot: "top-right", sale: false, price: 1 },
+          { name: "Banana", slot: "middle-left", sale: false, price: 3 },
+          { name: "Shiny Shell", slot: "middle-right", sale: true, price: 1 },
+          { name: "Broom", slot: "bottom-center", sale: false, price: 4 },
+          { name: "Walrus Tusk", slot: "bottom-right", sale: false, price: 4 },
+        ],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.layoutConfidence).toBe("considered");
+    expect(recommendation.layoutOptions[0].moves).toContain("Keep Wooden Sword at (1, 1).");
   });
 
   it("does not recommend buying a sale item the player cannot afford", () => {

@@ -1,19 +1,17 @@
 import type { BpbCache } from "@/lib/bpb/schemas";
 import { findBpbItemByName } from "@/lib/bpb/store";
 import type { CandidateAction, GameState, Recommendation, ShopItem } from "@/lib/core/types";
+import { optimizePlacement } from "@/lib/placement/optimizer";
 import { classPlanGroundingItems, classPlans, genericClassPlans } from "./guide-notes";
 
 type RecommendInput = {
   gameState: GameState;
   bpbCache: BpbCache | null;
   correctionPromptsUsed: string[];
+  itemRecognitionSource?: Recommendation["recognitionPolicy"]["itemRecognition"];
 };
 
 const EARLY_SHOP_PACKAGE_PRIORITY = ["Broom", "Banana", "Stone", "Shiny Shell", "Walrus Tusk"];
-const DEFAULT_PLACEMENT_ADVICE = [
-  "Keep active weapons in bag space and avoid moving them unless a star bonus clearly improves them.",
-  "Before starting battle, check that stamina or support items do not block weapon adjacency.",
-];
 
 function hasGroundedItem(cache: BpbCache | null, itemName: string): boolean {
   if (cache === null) {
@@ -74,34 +72,10 @@ function buyAction(item: ShopItem, value: number, teachingReason: string): Candi
   };
 }
 
-function earlyShopPackagePlacementAdvice(packageItems: ShopItem[]): string[] {
-  const itemNames = new Set(packageItems.map((item) => item.name));
-  const advice = [];
-
-  if (itemNames.has("Broom")) {
-    advice.push("Keep Wooden Sword active and place Broom as the second weapon, not in storage.");
-  }
-
-  if (itemNames.has("Stone")) {
-    advice.push("Put Stone adjacent to Wooden Sword or Broom so it contributes damage immediately.");
-  }
-
-  if (itemNames.has("Banana")) {
-    advice.push("Place Banana where it supports stamina without blocking weapon adjacency.");
-  }
-
-  if (itemNames.has("Shiny Shell") || itemNames.has("Walrus Tusk")) {
-    const extras = ["Shiny Shell", "Walrus Tusk"].filter((itemName) => itemNames.has(itemName)).join(" and ");
-    advice.push(`Fit ${extras} only after the weapon and stamina layout is stable.`);
-  }
-
-  return advice.length ? advice : DEFAULT_PLACEMENT_ADVICE;
-}
-
 function earlyShopPackageAction(
   gameState: GameState,
   bpbCache: BpbCache | null,
-): { action: CandidateAction; placementAdvice: string[] } | null {
+): { action: CandidateAction; targetItems: string[] } | null {
   if ((gameState.round ?? 99) > 2 || gameState.gold === null) {
     return null;
   }
@@ -139,7 +113,44 @@ function earlyShopPackageAction(
       assumptions: [],
       teachingReason: `Buy ${target}: this round-one shopping sequence ${spendText} to add a second weapon, stamina support, and cheap tempo pieces.`,
     },
-    placementAdvice: earlyShopPackagePlacementAdvice(packageItems),
+    targetItems: packageItems.map((item) => item.name),
+  };
+}
+
+function recognitionPolicy(
+  assumptionsMade: string[],
+  source: Recommendation["recognitionPolicy"]["itemRecognition"] | undefined,
+): Recommendation["recognitionPolicy"] {
+  if (source === "llm-fallback") {
+    return {
+      itemRecognition: "llm-fallback",
+      summary:
+        "This result used an LLM fallback/audit path for screen reading. BPB grounding still gates item facts, but confirm item names and positions when precision matters.",
+      warnings: assumptionsMade,
+    };
+  }
+
+  if (source === "user-confirmed") {
+    return {
+      itemRecognition: "user-confirmed",
+      summary: "Item names came from user-confirmed correction data and were grounded against the local BPB cache before recommendation.",
+      warnings: assumptionsMade,
+    };
+  }
+
+  if (assumptionsMade.length === 0) {
+    return {
+      itemRecognition: source === "local-first" ? "local-first" : "mixed",
+      summary: "Item names used for advice are grounded against the local BPB cache before recommendation; the LLM is not treated as item authority.",
+      warnings: [],
+    };
+  }
+
+  return {
+    itemRecognition: "mixed",
+    summary:
+      "Some visible item names are not grounded locally yet. Treat item-specific advice as provisional until the recognizer or user confirmation resolves them.",
+    warnings: assumptionsMade,
   };
 }
 
@@ -150,7 +161,7 @@ function ungroundedItemAssumptions(gameState: GameState, bpbCache: BpbCache | nu
 }
 
 export function recommendNextAction(input: RecommendInput): Recommendation {
-  const { gameState, bpbCache, correctionPromptsUsed } = input;
+  const { gameState, bpbCache, correctionPromptsUsed, itemRecognitionSource } = input;
   const assumptionsMade = ungroundedItemAssumptions(gameState, bpbCache);
   const rejectedAlternatives: CandidateAction[] = gameState.shopItems
     .filter((item) => item.sale && (!canAfford(item, gameState.gold) || !hasGroundedItem(bpbCache, item.name)))
@@ -173,14 +184,18 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
     });
   const planSupported = planForClass(gameState, bpbCache);
   const earlyPackageAction = earlyShopPackageAction(gameState, bpbCache);
+  const itemRecognitionPolicy = recognitionPolicy(assumptionsMade, itemRecognitionSource);
 
   if (earlyPackageAction) {
+    const placementPlan = optimizePlacement({ gameState, targetItems: earlyPackageAction.targetItems });
+
     return {
       bestAction: earlyPackageAction.action,
       shortReason: `Buy this shopping sequence now: ${earlyPackageAction.action.target}. It spends your early gold on grounded tempo instead of over-rolling.`,
       rejectedAlternatives,
       planSupported,
-      placementAdvice: earlyPackageAction.placementAdvice,
+      ...placementPlan,
+      recognitionPolicy: itemRecognitionPolicy,
       nextTargets: ["After placement is stable, start battle.", "Next shop, look for Hero Sword and Whetstone lines."],
       assumptionsMade,
       correctionPromptsUsed,
@@ -191,6 +206,8 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
     (item) => item.sale && canAfford(item, gameState.gold) && hasGroundedItem(bpbCache, item.name),
   );
   if (saleItem) {
+    const placementPlan = optimizePlacement({ gameState, targetItems: [saleItem.name] });
+
     return {
       bestAction: buyAction(
         saleItem,
@@ -200,10 +217,8 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
       shortReason: `Buy the sale ${saleItem.name} because sale items are low-risk tempo while you are still learning.`,
       rejectedAlternatives,
       planSupported,
-      placementAdvice: [
-        `After buying ${saleItem.name}, place it only if it improves an active item this round; otherwise keep the core weapon layout stable.`,
-        "Check the bought item's stars before battle so the bonus touches the intended weapon or support item.",
-      ],
+      ...placementPlan,
+      recognitionPolicy: itemRecognitionPolicy,
       nextTargets: ["Watch for core plan pieces next shop.", "Avoid rolling below useful gold unless you are chasing a known target."],
       assumptionsMade,
       correctionPromptsUsed,
@@ -211,6 +226,8 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
   }
 
   if ((gameState.round ?? 1) <= 3 && (gameState.gold ?? 0) <= 2 && gameState.shopItems.length === 0) {
+    const placementPlan = optimizePlacement({ gameState, targetItems: [] });
+
     return {
       bestAction: {
         type: "start-battle",
@@ -223,12 +240,15 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
       shortReason: "Preserve tempo and start the battle instead of spending your last gold on weak early rolls.",
       rejectedAlternatives,
       planSupported,
-      placementAdvice: DEFAULT_PLACEMENT_ADVICE,
+      ...placementPlan,
+      recognitionPolicy: itemRecognitionPolicy,
       nextTargets: ["Enter the next shop with a clear target.", "Prioritize commons and cheap plan pieces early."],
       assumptionsMade,
       correctionPromptsUsed,
     };
   }
+
+  const placementPlan = optimizePlacement({ gameState, targetItems: [] });
 
   return {
     bestAction: {
@@ -242,7 +262,8 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
     shortReason: "No grounded buy or pivot is clearly better, so keep tempo and continue the current plan.",
     rejectedAlternatives,
     planSupported,
-    placementAdvice: DEFAULT_PLACEMENT_ADVICE,
+    ...placementPlan,
+    recognitionPolicy: itemRecognitionPolicy,
     nextTargets: ["Look for plan-defining signpost items.", "Confirm unknown items so advice can become more precise."],
     assumptionsMade,
     correctionPromptsUsed,

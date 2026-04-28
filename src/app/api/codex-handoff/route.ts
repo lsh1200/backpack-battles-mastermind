@@ -73,6 +73,7 @@ export async function GET(request: Request) {
         validation: handoff.validation,
         bpbCache,
         correctionPromptsUsed: ["codex-test-mode"],
+        itemRecognitionSource: "llm-fallback",
       }),
     );
 

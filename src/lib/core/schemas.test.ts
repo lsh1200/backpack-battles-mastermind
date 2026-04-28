@@ -27,6 +27,49 @@ describe("core schemas", () => {
     expect(() => RecommendationSchema.parse({ reason: "missing action" })).toThrow();
   });
 
+  it("accepts layout-aware recommendation details", () => {
+    const recommendation = RecommendationSchema.parse({
+      bestAction: {
+        type: "buy",
+        target: "Broom, Banana",
+        value: 95,
+        risks: [],
+        assumptions: [],
+        teachingReason: "Buy early tempo.",
+      },
+      shortReason: "Buy early tempo.",
+      rejectedAlternatives: [],
+      planSupported: "Ranger weapon tempo.",
+      placementAdvice: ["Place Broom as the second active weapon."],
+      layoutConfidence: "considered",
+      recognitionPolicy: {
+        itemRecognition: "local-first",
+        summary: "Item names are grounded against local BPB data before recommendation.",
+        warnings: [],
+      },
+      layoutOptions: [
+        {
+          id: "tempo-weapons",
+          title: "Tempo weapons",
+          score: 92,
+          summary: "Prioritizes two active weapons and Stone adjacency.",
+          moves: ["Move Broom to (2, 1)."],
+          tradeoffs: ["Less room for extra utility."],
+          cells: [
+            { item: "Wooden Sword", x: 1, y: 1, width: 1, height: 1, role: "primary weapon" },
+            { item: "Broom", x: 2, y: 1, width: 1, height: 1, role: "second weapon" },
+          ],
+        },
+      ],
+      nextTargets: ["Start battle."],
+      assumptionsMade: [],
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.layoutConfidence).toBe("considered");
+    expect(recommendation.layoutOptions[0].cells[0].item).toBe("Wooden Sword");
+  });
+
   it("accepts the full analysis result shape", () => {
     const result = AnalysisResultSchema.parse({
       gameState: {
