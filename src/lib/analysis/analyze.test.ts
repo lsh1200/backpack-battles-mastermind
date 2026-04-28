@@ -234,15 +234,15 @@ describe("analysis orchestrator", () => {
 
     expect(result.gameState.backpackItems).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: "Ranger Bag", x: 0, y: 2 }),
-        expect.objectContaining({ name: "Wooden Sword", x: 1, y: 3 }),
+        expect.objectContaining({ name: "Ranger Bag", x: 1, y: 2 }),
+        expect.objectContaining({ name: "Wooden Sword", x: 2, y: 3 }),
       ]),
     );
     expect(result.recommendation?.layoutOptions[0]?.bags).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ item: "Ranger Bag", x: 2, y: 2 }),
-        expect.objectContaining({ item: "Leather Bag", x: 0, y: 3 }),
-        expect.objectContaining({ item: "Leather Bag", x: 4, y: 3 }),
+        expect.objectContaining({ item: "Ranger Bag", x: 3, y: 2 }),
+        expect.objectContaining({ item: "Leather Bag", x: 1, y: 3 }),
+        expect.objectContaining({ item: "Leather Bag", x: 5, y: 3 }),
       ]),
     );
   });

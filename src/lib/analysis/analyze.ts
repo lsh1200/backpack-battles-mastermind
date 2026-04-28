@@ -13,7 +13,7 @@ type AnalyzeCorrectedStateInput = {
   candidateOptionsByField?: Record<string, string[]>;
 };
 
-const RANGER_STARTER_GRID_ORIGIN = { x: 0, y: 2 };
+const RANGER_STARTER_GRID_ORIGIN = { x: 1, y: 2 };
 
 function knownGroundedItemNames(bpbCache: BpbCache | null): string[] {
   return bpbCache?.items.filter((item) => item.grounded).map((item) => item.name) ?? [];
