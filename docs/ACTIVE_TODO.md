@@ -36,7 +36,7 @@ This file is the source of truth for what Codex should do next. It exists to pre
 
 ### Task 11: Layout-Aware Placement Optimizer v1
 
-Status: `in_progress`
+Status: `done`
 
 Goal: Generate placement advice that explicitly says whether the current inventory layout was considered, asks for confirmation when coordinates are missing, renders multiple final layout options, and produces concrete move instructions when enough board data is available.
 
@@ -107,9 +107,9 @@ npm.cmd run build
 ```
 
 - [x] Step 13: Browser-check the handoff resume flow at `http://127.0.0.1:3000` with handoff ID `9592748f-55a7-4749-908d-1f24df8cb788`.
-- [ ] Step 14: Commit with message `feat: add layout-aware placement optimizer`.
-- [ ] Step 15: Push `codex/task-1-scaffold`.
-- [ ] Step 16: Mark this task `done` and record the commit hash.
+- [x] Step 14: Commit with message `feat: add layout-aware placement optimizer`.
+- [x] Step 15: Push `codex/task-1-scaffold`.
+- [x] Step 16: Mark this task `done` and record the commit hash.
 
 Acceptance Checklist:
 
@@ -124,6 +124,7 @@ Acceptance Checklist:
 
 Verification Evidence:
 
+- Commit: `67ec164 feat: add layout-aware placement optimizer`
 - `npm.cmd run lint` passed.
 - `npx.cmd tsc --noEmit -p tsconfig.json` passed.
 - `npm.cmd run test` passed: 15 files, 68 tests.
@@ -140,7 +141,7 @@ These are real ideas, but they must not interrupt the active task unless they be
 
 ### Task 12: Deterministic Item Recognition Primary Pipeline
 
-Status: `backlog`
+Status: `ready`
 
 Goal: Replace LLM item-name reading with deterministic local item recognition as the primary path. Use screenshot regions, BPB item icons/templates, pixel/feature matching, confidence scoring, and targeted user confirmation when confidence is low.
 
