@@ -20,6 +20,7 @@ type OptimizePlacementInput = {
   gameState: GameState;
   targetItems: string[];
   itemShapes?: Record<string, number[][]>;
+  itemImages?: Record<string, string>;
 };
 
 type PlannedCell = LayoutOption["cells"][number];
@@ -149,7 +150,12 @@ function shapePlacements(shape: number[][] | undefined): ShapePlacement[] {
   });
 }
 
-function plannedCellFor(item: string, coordinate: { x: number; y: number }, placement: ShapePlacement): PlannedCell {
+function plannedCellFor(
+  item: string,
+  coordinate: { x: number; y: number },
+  placement: ShapePlacement,
+  imageUrl: string | undefined,
+): PlannedCell {
   return {
     item,
     x: coordinate.x,
@@ -158,6 +164,7 @@ function plannedCellFor(item: string, coordinate: { x: number; y: number }, plac
     height: placement.height,
     shape: placement.shape,
     ...(placement.rotation ? { rotation: placement.rotation } : {}),
+    ...(imageUrl ? { imageUrl } : {}),
     ...(ROLE_BY_ITEM.get(item) ? { role: ROLE_BY_ITEM.get(item) } : {}),
   };
 }
@@ -218,6 +225,7 @@ function cellsForPriority(input: {
   board: BagAwareBoard;
   gameState: GameState;
   itemShapes: Record<string, number[][]>;
+  itemImages: Record<string, string>;
 }): { cells: PlannedCell[]; benchItems: BenchItem[] } {
   const activeCells = activeCellsByReadingOrder(input.board);
   const occupiedKeys = new Set<string>();
@@ -237,11 +245,12 @@ function cellsForPriority(input: {
         item: itemName,
         reason: "Keep in storage for now; it does not fit in the known active bag space without blocking higher-priority items.",
         ...(preview ? { shape: preview.shape, ...(preview.rotation ? { rotation: preview.rotation } : {}) } : {}),
+        ...(input.itemImages[itemName] ? { imageUrl: input.itemImages[itemName] } : {}),
       });
       continue;
     }
 
-    cells.push(plannedCellFor(itemName, candidate.coordinate, candidate.placement));
+    cells.push(plannedCellFor(itemName, candidate.coordinate, candidate.placement, input.itemImages[itemName]));
     for (const key of occupiedKeysFor(candidate.coordinate, candidate.placement.shape)) {
       occupiedKeys.add(key);
     }
@@ -294,6 +303,7 @@ function buildOption(input: {
   score: number;
   summary: string;
   tradeoffs: string[];
+  boardCells: { x: number; y: number }[];
   cells: PlannedCell[];
   benchItems: BenchItem[];
   gameState: GameState;
@@ -306,6 +316,7 @@ function buildOption(input: {
     summary: input.summary,
     moves: movesFor(input.cells, input.gameState, input.layoutConfidence),
     tradeoffs: input.tradeoffs,
+    boardCells: input.boardCells,
     cells: input.cells,
     benchItems: input.benchItems,
   };
@@ -327,6 +338,7 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
   }
 
   const itemShapes = input.itemShapes ?? {};
+  const itemImages = input.itemImages ?? {};
   const tempoPriority = ["Wooden Sword", "Stone", "Lucky Clover", "Walrus Tusk", "Broom", "Banana", "Shiny Shell"];
   const staminaPriority = ["Wooden Sword", "Lucky Clover", "Stone", "Walrus Tusk", "Banana", "Broom", "Shiny Shell"];
   const tempoPlan = cellsForPriority({
@@ -335,6 +347,7 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
     board,
     gameState: input.gameState,
     itemShapes,
+    itemImages,
   });
   const staminaPlan = cellsForPriority({
     items: staminaPriority,
@@ -342,6 +355,7 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
     board,
     gameState: input.gameState,
     itemShapes,
+    itemImages,
   });
   const tempoCells = tempoPlan.cells;
   const staminaCells = staminaPlan.cells;
@@ -391,6 +405,7 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
         score: 92,
         summary: "Best when you want immediate round-one damage: two active weapons, Stone touching a weapon, Banana fitted after.",
         tradeoffs: ["Less flexible utility space because damage pieces get first claim on the board."],
+        boardCells: board.activeBagCells,
         cells: tempoCells,
         benchItems: tempoPlan.benchItems,
         gameState: input.gameState,
@@ -402,6 +417,7 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
         score: 86,
         summary: "Best when you are worried about stamina/space: Banana is protected first, then damage pieces fit around it.",
         tradeoffs: ["Slightly safer stamina support, but less aggressive than the tempo weapon layout."],
+        boardCells: board.activeBagCells,
         cells: staminaCells,
         benchItems: staminaPlan.benchItems,
         gameState: input.gameState,

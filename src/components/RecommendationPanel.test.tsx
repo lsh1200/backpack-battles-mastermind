@@ -33,15 +33,42 @@ const recommendation = {
       summary: "Prioritizes two active weapons.",
       moves: ["Keep Wooden Sword at (1, 1).", "Place Broom at (2, 1) as your second active weapon."],
       tradeoffs: ["Less flexible utility space."],
+      boardCells: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 1, y: 1 },
+        { x: 0, y: 2 },
+        { x: 1, y: 2 },
+      ],
       cells: [
-        { item: "Wooden Sword", x: 1, y: 1, width: 1, height: 2, shape: [[1], [1]], role: "primary weapon" },
-        { item: "Stone", x: 0, y: 0, width: 1, height: 1, shape: [[1]], role: "weapon damage adjacency" },
+        {
+          item: "Wooden Sword",
+          x: 1,
+          y: 1,
+          width: 1,
+          height: 2,
+          shape: [[1], [1]],
+          imageUrl: "https://awerc.github.io/bpb-cdn/i/WoodenSword.webp",
+          role: "primary weapon",
+        },
+        {
+          item: "Stone",
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 1,
+          shape: [[1]],
+          imageUrl: "https://awerc.github.io/bpb-cdn/i/Stone.webp",
+          role: "weapon damage adjacency",
+        },
       ],
       benchItems: [
         {
           item: "Broom",
           reason: "Keep in storage for now; it does not fit in the known active bag space.",
           shape: [[0, 1], [0, 1], [0, 1], [0, 1]],
+          imageUrl: "https://awerc.github.io/bpb-cdn/i/Broom.webp",
         },
       ],
     },
@@ -52,6 +79,7 @@ const recommendation = {
       summary: "Keeps Banana safer.",
       moves: ["Place Banana at (0, 2)."],
       tradeoffs: ["Slightly less weapon adjacency."],
+      boardCells: [],
       cells: [{ item: "Banana", x: 0, y: 2, width: 1, height: 1, role: "stamina support" }],
       benchItems: [],
     },
@@ -76,6 +104,8 @@ describe("RecommendationPanel", () => {
     expect(markup).toContain("Broom");
     expect(markup).toContain("Storage for now");
     expect(markup).toContain("Broom footprint");
+    expect(markup).toContain("inventory-board");
+    expect(markup).toContain("WoodenSword.webp");
     expect(markup).toContain("Item Recognition");
     expect(markup).toContain("local-first");
   });

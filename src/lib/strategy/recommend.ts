@@ -179,6 +179,19 @@ function itemShapesByName(itemNames: string[], bpbCache: BpbCache | null): Recor
   );
 }
 
+function itemImagesByName(itemNames: string[], bpbCache: BpbCache | null): Record<string, string> {
+  if (!bpbCache) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    itemNames.flatMap((itemName) => {
+      const item = findBpbItemByName(bpbCache, itemName);
+      return item?.grounded && item.imageUrl ? [[itemName, item.imageUrl] as const] : [];
+    }),
+  );
+}
+
 function withBpbPlacementMetadata(item: BackpackItem, bpbCache: BpbCache | null): BackpackItem {
   const bpbItem = bpbCache ? findBpbItemByName(bpbCache, item.name) : undefined;
   if (!bpbItem?.grounded) {
@@ -235,13 +248,15 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
 
   if (earlyPackageAction) {
     const placementState = gameStateWithBpbPlacementMetadata(gameState, bpbCache);
+    const placementItemNames = [
+      ...placementState.backpackItems.map((item) => item.name),
+      ...earlyPackageAction.targetItems,
+    ];
     const placementPlan = optimizePlacement({
       gameState: placementState,
       targetItems: earlyPackageAction.targetItems,
-      itemShapes: itemShapesByName(
-        [...placementState.backpackItems.map((item) => item.name), ...earlyPackageAction.targetItems],
-        bpbCache,
-      ),
+      itemShapes: itemShapesByName(placementItemNames, bpbCache),
+      itemImages: itemImagesByName(placementItemNames, bpbCache),
     });
 
     return {
@@ -262,10 +277,12 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
   );
   if (saleItem) {
     const placementState = gameStateWithBpbPlacementMetadata(gameState, bpbCache);
+    const placementItemNames = [...placementState.backpackItems.map((item) => item.name), saleItem.name];
     const placementPlan = optimizePlacement({
       gameState: placementState,
       targetItems: [saleItem.name],
-      itemShapes: itemShapesByName([...placementState.backpackItems.map((item) => item.name), saleItem.name], bpbCache),
+      itemShapes: itemShapesByName(placementItemNames, bpbCache),
+      itemImages: itemImagesByName(placementItemNames, bpbCache),
     });
 
     return {
@@ -287,10 +304,12 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
 
   if ((gameState.round ?? 1) <= 3 && (gameState.gold ?? 0) <= 2 && gameState.shopItems.length === 0) {
     const placementState = gameStateWithBpbPlacementMetadata(gameState, bpbCache);
+    const placementItemNames = placementState.backpackItems.map((item) => item.name);
     const placementPlan = optimizePlacement({
       gameState: placementState,
       targetItems: [],
-      itemShapes: itemShapesByName(placementState.backpackItems.map((item) => item.name), bpbCache),
+      itemShapes: itemShapesByName(placementItemNames, bpbCache),
+      itemImages: itemImagesByName(placementItemNames, bpbCache),
     });
 
     return {
@@ -314,10 +333,12 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
   }
 
   const placementState = gameStateWithBpbPlacementMetadata(gameState, bpbCache);
+  const placementItemNames = placementState.backpackItems.map((item) => item.name);
   const placementPlan = optimizePlacement({
     gameState: placementState,
     targetItems: [],
-    itemShapes: itemShapesByName(placementState.backpackItems.map((item) => item.name), bpbCache),
+    itemShapes: itemShapesByName(placementItemNames, bpbCache),
+    itemImages: itemImagesByName(placementItemNames, bpbCache),
   });
 
   return {

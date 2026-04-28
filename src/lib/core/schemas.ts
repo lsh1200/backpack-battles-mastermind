@@ -101,6 +101,7 @@ export const LayoutCellSchema = z.object({
   height: z.number().int().positive(),
   shape: z.array(z.array(z.number().int().nonnegative())).optional(),
   rotation: z.number().int().min(0).max(270).optional(),
+  imageUrl: z.string().url().optional(),
   role: z.string().min(1).optional(),
 });
 
@@ -109,6 +110,7 @@ export const LayoutBenchItemSchema = z.object({
   reason: z.string().min(1),
   shape: z.array(z.array(z.number().int().nonnegative())).optional(),
   rotation: z.number().int().min(0).max(270).optional(),
+  imageUrl: z.string().url().optional(),
 });
 
 export const LayoutOptionSchema = z.object({
@@ -118,6 +120,7 @@ export const LayoutOptionSchema = z.object({
   summary: z.string().min(1),
   moves: z.array(z.string().min(1)),
   tradeoffs: z.array(z.string().min(1)),
+  boardCells: z.array(FootprintCellSchema).default([]),
   cells: z.array(LayoutCellSchema),
   benchItems: z.array(LayoutBenchItemSchema).default([]),
 });

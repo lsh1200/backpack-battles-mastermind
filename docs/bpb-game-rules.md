@@ -60,3 +60,15 @@ The Banana body occupies the three `1` cells. The `2` cells are star markers and
 - Show storage/bench items with their real footprints when they do not fit.
 - Text instructions may include coordinates as backup, but the visual footprint should be the primary placement explanation.
 - Do not claim a full exact layout when bag placement or bag footprint is unknown.
+
+## BPB Rendering Pattern
+
+The BPB builder renders items as cell-sized grid objects:
+
+- Bag/item occupied cells are rendered from `trimmedShape` values equal to `1`.
+- The item sprite is rendered over the occupied bounding box with dimensions based on trimmed shape `width` and `height`.
+- A transparent interaction layer uses a CSS `clip-path` made from the physical `1` cells.
+- Star/diamond/tertiary/lightning markers are rendered as overlays from shape values `2`, `3`, `4`, and `5`.
+- Tooltip/popover details are attached to the rendered item, and item rotation rotates the item container.
+
+The recommendation UI should follow this pattern: render bag slots, place item sprites over their occupied cells, expose item details by interaction, and keep marker cells as overlays rather than occupied space.

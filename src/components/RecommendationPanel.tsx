@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import type { CSSProperties } from "react";
 import type { Recommendation } from "@/lib/core/types";
 
@@ -15,7 +16,29 @@ function shapeDimensions(shape: number[][] | undefined): { columns: number; rows
   };
 }
 
-function ItemShape({ label, shape }: { label: string; shape?: number[][] }) {
+function shapeClipPath(shape: number[][] | undefined): string | undefined {
+  const cellSize = 66;
+  const resolvedShape = shape ?? [[1]];
+  const paths = resolvedShape.flatMap((row, y) =>
+    row.flatMap((value, x) =>
+      value === 1 ? [`M${x * cellSize},${y * cellSize} h${cellSize} v${cellSize} h-${cellSize} Z`] : [],
+    ),
+  );
+
+  return paths.length ? `path('${paths.join(" ")}')` : undefined;
+}
+
+function occupiedShapeCells(shape: number[][] | undefined): { x: number; y: number }[] {
+  return (shape ?? [[1]]).flatMap((row, y) => row.flatMap((value, x) => (value === 1 ? [{ x, y }] : [])));
+}
+
+function shapeMarkers(shape: number[][] | undefined): { x: number; y: number; value: number }[] {
+  return (shape ?? [[1]]).flatMap((row, y) =>
+    row.flatMap((value, x) => (value > 1 ? [{ x, y, value }] : [])),
+  );
+}
+
+function ItemShape({ label, shape, imageUrl }: { label: string; shape?: number[][]; imageUrl?: string }) {
   const dimensions = shapeDimensions(shape);
   const resolvedShape = shape ?? [[1]];
   const style = {
@@ -25,6 +48,7 @@ function ItemShape({ label, shape }: { label: string; shape?: number[][] }) {
 
   return (
     <div className="item-shape" style={style} aria-label={`${label} footprint`}>
+      {imageUrl ? <img alt="" className="shape-thumb" src={imageUrl} /> : null}
       {Array.from({ length: dimensions.rows }).flatMap((_, y) =>
         Array.from({ length: dimensions.columns }).map((__, x) => {
           const value = resolvedShape[y]?.[x] ?? 0;
@@ -41,9 +65,92 @@ function ItemShape({ label, shape }: { label: string; shape?: number[][] }) {
   );
 }
 
+function InventoryItem({
+  cell,
+  optionId,
+  minX,
+  minY,
+}: {
+  cell: Recommendation["layoutOptions"][number]["cells"][number];
+  optionId: string;
+  minX: number;
+  minY: number;
+}) {
+  const clipPath = shapeClipPath(cell.shape);
+  const occupiedCells = occupiedShapeCells(cell.shape);
+  const markers = shapeMarkers(cell.shape);
+  const style = {
+    gridColumn: `${cell.x - minX + 1} / span ${cell.width}`,
+    gridRow: `${cell.y - minY + 1} / span ${cell.height}`,
+    "--item-width": cell.width,
+    "--item-height": cell.height,
+    "--item-rotation": `${cell.rotation ?? 0}deg`,
+  } as CSSProperties;
+  const hitboxStyle = {
+    ...(clipPath ? { clipPath } : {}),
+  } as CSSProperties;
+
+  return (
+    <details className="inventory-item" key={`${optionId}-${cell.item}`} style={style}>
+      <summary aria-label={`${cell.item} layout details`}>
+        {occupiedCells.map((occupiedCell) => (
+          <span
+            aria-hidden="true"
+            className="item-body-cell"
+            key={`${cell.item}-body-${occupiedCell.x}-${occupiedCell.y}`}
+            style={{
+              gridColumn: occupiedCell.x + 1,
+              gridRow: occupiedCell.y + 1,
+            }}
+          />
+        ))}
+        <span className="inventory-item-art">
+          {cell.imageUrl ? (
+            <img alt={cell.item} src={cell.imageUrl} />
+          ) : (
+            <span className="inventory-item-fallback">{cell.item.slice(0, 2)}</span>
+          )}
+        </span>
+        {markers.map((marker) => (
+          <span
+            aria-hidden="true"
+            className={`item-marker marker-${marker.value}`}
+            key={`${cell.item}-${marker.x}-${marker.y}-${marker.value}`}
+            style={{
+              left: `calc(${marker.x} * var(--inventory-cell) + var(--inventory-cell) / 2)`,
+              top: `calc(${marker.y} * var(--inventory-cell) + var(--inventory-cell) / 2)`,
+            }}
+          />
+        ))}
+        <span aria-hidden="true" className="inventory-item-hitbox" style={hitboxStyle} />
+      </summary>
+      <div className="inventory-popover">
+        <strong>{cell.item}</strong>
+        {cell.role ? <span>{cell.role}</span> : null}
+        {cell.rotation ? <span>Rotate {cell.rotation} deg</span> : null}
+        <span>
+          {cell.width}x{cell.height} occupied footprint
+        </span>
+      </div>
+    </details>
+  );
+}
+
 function LayoutOptionCard({ option }: { option: Recommendation["layoutOptions"][number] }) {
-  const columns = Math.max(2, ...option.cells.map((cell) => cell.x + cell.width));
-  const rows = Math.max(3, ...option.cells.map((cell) => cell.y + cell.height));
+  const optionBoardCells = option.boardCells ?? [];
+  const boardCells = optionBoardCells.length
+    ? optionBoardCells
+    : option.cells.flatMap((cell) =>
+        Array.from({ length: cell.height }).flatMap((_, y) =>
+          Array.from({ length: cell.width }).map((__, x) => ({ x: cell.x + x, y: cell.y + y })),
+        ),
+      );
+  const minX = Math.min(0, ...boardCells.map((cell) => cell.x), ...option.cells.map((cell) => cell.x));
+  const minY = Math.min(0, ...boardCells.map((cell) => cell.y), ...option.cells.map((cell) => cell.y));
+  const maxX = Math.max(1, ...boardCells.map((cell) => cell.x + 1), ...option.cells.map((cell) => cell.x + cell.width));
+  const maxY = Math.max(2, ...boardCells.map((cell) => cell.y + 1), ...option.cells.map((cell) => cell.y + cell.height));
+  const columns = Math.max(2, maxX - minX);
+  const rows = Math.max(3, maxY - minY);
   const gridStyle = {
     "--layout-columns": columns,
     "--layout-rows": rows,
@@ -58,31 +165,17 @@ function LayoutOptionCard({ option }: { option: Recommendation["layoutOptions"][
         </div>
         <span>{option.score}</span>
       </div>
-      <div className="layout-grid" style={gridStyle}>
-        {Array.from({ length: rows }).flatMap((_, y) =>
-          Array.from({ length: columns }).map((__, x) => (
-            <span
-              aria-hidden="true"
-              className="layout-board-cell"
-              key={`${option.id}-board-${x}-${y}`}
-              style={{ gridColumn: x + 1, gridRow: y + 1 }}
-            />
-          )),
-        )}
+      <div className="inventory-board" style={gridStyle}>
+        {boardCells.map((cell) => (
+          <span
+            aria-hidden="true"
+            className="inventory-board-cell"
+            key={`${option.id}-board-${cell.x}-${cell.y}`}
+            style={{ gridColumn: cell.x - minX + 1, gridRow: cell.y - minY + 1 }}
+          />
+        ))}
         {option.cells.map((cell) => (
-          <div
-            className="layout-cell"
-            key={`${option.id}-${cell.item}`}
-            style={{
-              gridColumn: `${cell.x + 1} / span ${cell.width}`,
-              gridRow: `${cell.y + 1} / span ${cell.height}`,
-            }}
-          >
-            <ItemShape label={cell.item} shape={cell.shape} />
-            <strong>{cell.item}</strong>
-            {cell.rotation ? <span>Rotate {cell.rotation} deg</span> : null}
-            {cell.role ? <span>{cell.role}</span> : null}
-          </div>
+          <InventoryItem cell={cell} key={`${option.id}-${cell.item}`} minX={minX} minY={minY} optionId={option.id} />
         ))}
       </div>
       {option.benchItems.length ? (
@@ -91,7 +184,7 @@ function LayoutOptionCard({ option }: { option: Recommendation["layoutOptions"][
           <div className="bench-list">
             {option.benchItems.map((item) => (
               <div className="bench-item" key={`${option.id}-${item.item}`}>
-                <ItemShape label={item.item} shape={item.shape} />
+                <ItemShape imageUrl={item.imageUrl} label={item.item} shape={item.shape} />
                 <div>
                   <strong>{item.item}</strong>
                   <span>{item.reason}</span>
