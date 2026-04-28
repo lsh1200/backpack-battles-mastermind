@@ -129,6 +129,28 @@ h1 {
   gap: 12px;
 }
 
+.mode-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.mode-button {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mode-button.active {
+  border-color: rgba(240, 195, 90, 0.7);
+  background: rgba(240, 195, 90, 0.18);
+  color: var(--accent);
+}
+
 .file-drop {
   display: grid;
   place-items: center;
@@ -293,6 +315,35 @@ select {
 
 .history-list strong {
   overflow-wrap: anywhere;
+}
+
+.handoff-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.handoff-paths {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.handoff-paths div {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.prompt-preview {
+  width: 100%;
+  min-height: 180px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #101411;
+  color: var(--muted);
+  padding: 10px;
+  resize: vertical;
 }
 
 .error-panel {

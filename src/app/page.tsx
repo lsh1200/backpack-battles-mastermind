@@ -3,11 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { AnalysisStatePanel } from "@/components/AnalysisStatePanel";
 import { CorrectionPanel } from "@/components/CorrectionPanel";
+import { HandoffPanel, type CodexHandoffState } from "@/components/HandoffPanel";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { RecommendationPanel } from "@/components/RecommendationPanel";
 import { ScreenshotIntake } from "@/components/ScreenshotIntake";
 import type { AnalysisResult } from "@/lib/core/types";
 import { applyCorrections } from "@/lib/vision/correction";
+
+type AnalysisMode = "api" | "codex";
 
 export default function HomePage() {
   const [file, setFile] = useState<File | null>(null);
@@ -17,6 +20,8 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [mode, setMode] = useState<AnalysisMode>("api");
+  const [handoff, setHandoff] = useState<CodexHandoffState | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -37,7 +42,7 @@ export default function HomePage() {
     }
   }
 
-  async function analyze(correctedState?: unknown) {
+  async function analyzeWithApi(correctedState?: unknown) {
     if (!file) {
       return;
     }
@@ -59,6 +64,7 @@ export default function HomePage() {
       }
 
       setResult(json);
+      setHandoff(null);
       setCorrections({});
       await refreshHistory();
     } catch (caught) {
@@ -68,12 +74,55 @@ export default function HomePage() {
     }
   }
 
+  async function createCodexHandoff() {
+    if (!file) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    try {
+      const form = new FormData();
+      form.append("screenshot", file);
+      const response = await fetch("/api/codex-handoff", { method: "POST", body: form });
+      const json = await response.json();
+      if (!response.ok) {
+        throw new Error(json.error ?? "Codex handoff failed");
+      }
+
+      setResult(null);
+      setCorrections({});
+      setHandoff({
+        handoffId: json.handoffId,
+        status: json.status,
+        prompt: json.prompt,
+        promptPath: json.promptPath,
+        resultPath: json.resultPath,
+        screenshotPath: json.screenshotPath,
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Codex handoff failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function analyze(correctedState?: unknown) {
+    if (correctedState || mode === "api") {
+      void analyzeWithApi(correctedState);
+      return;
+    }
+
+    void createCodexHandoff();
+  }
+
   function submitCorrections() {
     if (!result) {
       return;
     }
 
-    void analyze(applyCorrections(result.gameState, corrections));
+    analyze(applyCorrections(result.gameState, corrections));
   }
 
   useEffect(() => {
@@ -91,6 +140,55 @@ export default function HomePage() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    if (!handoff || handoff.status !== "pending") {
+      return;
+    }
+
+    const controller = new AbortController();
+    let active = true;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    async function pollHandoff() {
+      try {
+        const response = await fetch(`/api/codex-handoff?id=${handoff?.handoffId}`, { signal: controller.signal });
+        const json = await response.json();
+        if (!response.ok) {
+          throw new Error(json.error ?? "Codex handoff polling failed");
+        }
+
+        if (!active) {
+          return;
+        }
+
+        if (json.status === "complete") {
+          setResult(json.result);
+          setCorrections({});
+          setHandoff((current) => (current ? { ...current, status: "complete" } : current));
+          return;
+        }
+
+        timeoutId = setTimeout(pollHandoff, 3000);
+      } catch (caught) {
+        if (!active || (caught instanceof DOMException && caught.name === "AbortError")) {
+          return;
+        }
+
+        setError(caught instanceof Error ? caught.message : "Codex handoff polling failed");
+      }
+    }
+
+    timeoutId = setTimeout(pollHandoff, 1000);
+
+    return () => {
+      active = false;
+      controller.abort();
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [handoff]);
+
   function handleFile(nextFile: File) {
     if (previewUrlRef.current) {
       URL.revokeObjectURL(previewUrlRef.current);
@@ -101,6 +199,7 @@ export default function HomePage() {
     setPreviewUrl(nextPreviewUrl);
     setFile(nextFile);
     setResult(null);
+    setHandoff(null);
     setError(null);
     setCorrections({});
   }
@@ -113,11 +212,14 @@ export default function HomePage() {
       </header>
       <ScreenshotIntake
         busy={busy}
+        mode={mode}
         previewUrl={previewUrl}
-        onAnalyze={() => void analyze()}
+        onAnalyze={() => analyze()}
         onFile={handleFile}
+        onModeChange={setMode}
       />
       {error ? <section className="panel error-panel">{error}</section> : null}
+      <HandoffPanel handoff={handoff} />
       <AnalysisStatePanel result={result} />
       <CorrectionPanel
         corrections={corrections}
