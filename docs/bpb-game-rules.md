@@ -38,6 +38,8 @@ The Banana body occupies the three `1` cells. The `2` cells are star markers and
 - A bag's `1` cells create active backpack cells where non-bag items may be placed.
 - Bag marker values, if present, should not be treated as usable inventory cells unless BPB data confirms they are physical `1` cells.
 - Items must fit all of their physical `1` cells inside active bag cells.
+- Bag identity matters. BPB bag effects are attached to the item type, not just the covered cells, so the optimizer must keep the actual bag item (`Leather Bag`, `Ranger Bag`, `Potion Belt`, etc.) when deriving active space.
+- Ranger round-one screenshots can show a Ranger Bag between two visible 2x2 Leather Bags. Those side groups must be modeled as actual `Leather Bag` bag items, not generic starter cells, because bag type controls shape and item-inside effects.
 
 ## Item Placement
 

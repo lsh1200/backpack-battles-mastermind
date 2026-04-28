@@ -99,6 +99,21 @@ const bpbCache: BpbCache = {
       tags: [],
     },
     {
+      id: 11,
+      name: "Leather Bag",
+      aliases: ["leather bag", "leatherbag"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/LeatherBag.webp",
+      grounded: true,
+      type: "Bag",
+      shape: [
+        [1, 1],
+        [1, 1],
+      ],
+      gridWidth: 2,
+      gridHeight: 2,
+      tags: [],
+    },
+    {
       id: 67,
       name: "Ranger Bag",
       aliases: ["ranger bag", "rangerbag"],
@@ -112,6 +127,23 @@ const bpbCache: BpbCache = {
       ],
       gridWidth: 2,
       gridHeight: 3,
+      tags: [],
+    },
+    {
+      id: 70,
+      name: "Potion Belt",
+      aliases: ["potion belt", "potionbelt"],
+      imageUrl: "https://awerc.github.io/bpb-cdn/i/PotionBelt.webp",
+      grounded: true,
+      type: "Bag",
+      shape: [
+        [0, 1],
+        [0, 1],
+        [0, 1],
+        [0, 1],
+      ],
+      gridWidth: 2,
+      gridHeight: 4,
       tags: [],
     },
     {
@@ -239,7 +271,8 @@ describe("recommendNextAction", () => {
     });
 
     expect(recommendation.layoutConfidence).toBe("considered");
-    expect(recommendation.layoutOptions[0].moves).toContain("Keep Wooden Sword at (1, 1).");
+    expect(recommendation.layoutOptions[0].boardCells).toHaveLength(14);
+    expect(recommendation.layoutOptions[0].moves).toContain("Keep Wooden Sword at (3, 1).");
   });
 
   it("uses BPB bag shape data when the screenshot has bag placement but no footprint", () => {
@@ -268,13 +301,15 @@ describe("recommendNextAction", () => {
     expect(recommendation.placementAdvice.join(" ")).toContain("Known bag space was considered");
     expect(recommendation.placementAdvice.join(" ")).not.toContain("Ranger Bag footprint is unknown");
     expect(recommendation.layoutOptions[0].cells.length).toBeGreaterThan(0);
-    expect(recommendation.layoutOptions[0].cells.every((cell) => cell.x >= 0 && cell.x <= 1 && cell.y >= 0 && cell.y <= 2)).toBe(true);
+    expect(recommendation.layoutOptions[0].boardCells).toHaveLength(14);
+    expect(recommendation.layoutOptions[0].boardCells).toEqual(
+      expect.arrayContaining([{ x: 0, y: 1 }, { x: 3, y: 2 }, { x: 5, y: 2 }]),
+    );
     expect(recommendation.layoutOptions[0].cells).toContainEqual(
       expect.objectContaining({ item: "Wooden Sword", width: 1, height: 2, shape: [[1], [1]] }),
     );
-    expect(recommendation.layoutOptions[0].benchItems.map((item) => item.item)).toEqual(
-      expect.arrayContaining(["Broom", "Banana"]),
-    );
+    expect(recommendation.layoutOptions[0].cells.map((item) => item.item)).toContain("Banana");
+    expect(recommendation.layoutOptions[0].benchItems.map((item) => item.item)).toContain("Broom");
   });
 
   it("explains when known bag space was considered for placement", () => {
@@ -311,7 +346,35 @@ describe("recommendNextAction", () => {
 
     expect(recommendation.layoutConfidence).toBe("considered");
     expect(recommendation.placementAdvice.join(" ")).toContain("Known bag space was considered");
-    expect(recommendation.layoutOptions[0].cells.every((cell) => cell.x <= 2 && cell.y <= 1)).toBe(true);
+    expect(recommendation.layoutOptions[0].boardCells).toHaveLength(14);
+    expect(recommendation.layoutOptions[0].boardCells).toEqual(
+      expect.arrayContaining([{ x: 0, y: 1 }, { x: 3, y: 2 }, { x: 5, y: 2 }]),
+    );
+  });
+
+  it("treats BPB type Bag items as active bag space even when the name does not contain bag", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        round: 1,
+        gold: 8,
+        backpackItems: [
+          { name: "Potion Belt", location: "bag", x: 0, y: 0 },
+          { name: "Wooden Sword", location: "bag", x: 1, y: 0 },
+        ],
+        shopItems: [{ name: "Stone", slot: "top-right", sale: false, price: 1 }],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.layoutConfidence).toBe("considered");
+    expect(recommendation.layoutOptions[0].boardCells).toEqual([
+      { x: 1, y: 0 },
+      { x: 1, y: 1 },
+      { x: 1, y: 2 },
+      { x: 1, y: 3 },
+    ]);
+    expect(recommendation.placementAdvice.join(" ")).not.toContain("Potion Belt footprint is unknown");
   });
 
   it("uses BPB cache shape instead of asking for bag shape confirmation", () => {

@@ -462,6 +462,7 @@ input {
   max-width: 100%;
   overflow-x: auto;
   padding: 8px;
+  margin: 0 auto;
   border: 1px solid var(--line);
   border-radius: 6px;
   background:

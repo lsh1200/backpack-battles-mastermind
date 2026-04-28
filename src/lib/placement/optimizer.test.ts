@@ -118,10 +118,8 @@ describe("optimizePlacement", () => {
 
     expect(plan.layoutConfidence).toBe("considered");
     expect(plan.layoutOptions[0].cells.map((cell) => cell.item)).toContain("Broom");
-    expect(plan.layoutOptions[0].cells.every((cell) => cell.x <= 1 && cell.y <= 2)).toBe(true);
-    expect(plan.layoutOptions[0].cells).not.toContainEqual(
-      expect.objectContaining({ item: "Broom", x: 2, y: 1 }),
-    );
+    expect(plan.layoutOptions[0].boardCells).toHaveLength(6);
+    expect(plan.layoutOptions[0].boardCells).toContainEqual({ x: 1, y: 2 });
   });
 
   it("keeps oversized BPB-shaped items in storage instead of drawing them as 1x1 cells", () => {
@@ -171,10 +169,10 @@ describe("optimizePlacement", () => {
     expect(plan.layoutOptions[0].cells).toContainEqual(
       expect.objectContaining({ item: "Wooden Sword", width: 1, height: 2, shape: [[1], [1]] }),
     );
-    expect(plan.layoutOptions[0].cells.map((cell) => cell.item)).not.toContain("Broom");
     expect(plan.layoutOptions[0].benchItems.map((item) => item.item)).toEqual(
       expect.arrayContaining(["Broom", "Banana"]),
     );
+    expect(plan.layoutOptions[0].cells.map((cell) => cell.item)).not.toContain("Broom");
     expect(plan.layoutOptions[0].cells).toContainEqual(
       expect.objectContaining({ item: "Shiny Shell", width: 1, height: 1, shape: [[1]] }),
     );

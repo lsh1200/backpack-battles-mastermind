@@ -212,12 +212,87 @@ function withBpbPlacementMetadata(item: BackpackItem, bpbCache: BpbCache | null)
   };
 }
 
-function gameStateWithBpbPlacementMetadata(gameState: GameState, bpbCache: BpbCache | null): GameState {
+function isMissingVisibleRangerStarterBags(gameState: GameState): boolean {
+  const bagItems = gameState.backpackItems.filter((item) => item.location === "bag" && /\bbag\b/i.test(item.name));
+  return (
+    gameState.className === "Ranger" &&
+    gameState.bagChoice === "Ranger Bag" &&
+    bagItems.some((item) => item.name === "Ranger Bag" && item.x !== undefined && item.y !== undefined) &&
+    !bagItems.some((item) => item.name === "Leather Bag")
+  );
+}
+
+function withVisibleRangerStarterBags(gameState: GameState, bpbCache: BpbCache | null): GameState {
+  if (!isMissingVisibleRangerStarterBags(gameState)) {
+    return gameState;
+  }
+
+  const rangerBag = gameState.backpackItems.find(
+    (item) => item.name === "Ranger Bag" && item.x !== undefined && item.y !== undefined,
+  );
+  if (!rangerBag || rangerBag.x === undefined || rangerBag.y === undefined) {
+    return gameState;
+  }
+  const rangerOrigin = { x: rangerBag.x, y: rangerBag.y };
+
+  const rangerBagItem = bpbCache ? findBpbItemByName(bpbCache, "Ranger Bag") : undefined;
+  const leatherBagItem = bpbCache ? findBpbItemByName(bpbCache, "Leather Bag") : undefined;
+  const rangerCells = footprintCellsFromShape(rangerBagItem?.shape);
+  const leatherCells = footprintCellsFromShape(leatherBagItem?.shape);
+  if (rangerCells.length === 0 || leatherCells.length === 0) {
+    return gameState;
+  }
+  const shouldShiftVisibleItems = gameState.backpackItems
+    .filter((item) => item.location === "bag" && item.name !== "Ranger Bag" && item.x !== undefined)
+    .every((item) => (item.x ?? 0) <= rangerOrigin.x + 1);
+
   return {
+    ...gameState,
+    backpackItems: [
+      {
+        ...rangerBag,
+        x: rangerOrigin.x + 2,
+        y: rangerOrigin.y,
+        itemKind: "bag",
+        ...(rangerCells.length ? { footprint: { source: "local-data" as const, cells: rangerCells } } : {}),
+      },
+      {
+        name: "Leather Bag",
+        location: "bag",
+        itemKind: "bag",
+        x: rangerOrigin.x,
+        y: rangerOrigin.y + 1,
+        ...(leatherCells.length ? { footprint: { source: "local-data" as const, cells: leatherCells } } : {}),
+        ...(leatherBagItem ? { groundedBpbId: leatherBagItem.id } : {}),
+      },
+      {
+        name: "Leather Bag",
+        location: "bag",
+        itemKind: "bag",
+        x: rangerOrigin.x + 4,
+        y: rangerOrigin.y + 1,
+        ...(leatherCells.length ? { footprint: { source: "local-data" as const, cells: leatherCells } } : {}),
+        ...(leatherBagItem ? { groundedBpbId: leatherBagItem.id } : {}),
+      },
+      ...gameState.backpackItems
+        .filter((item) => item !== rangerBag)
+        .map((item) =>
+          shouldShiftVisibleItems && item.location === "bag" && item.itemKind !== "bag" && item.x !== undefined
+            ? { ...item, x: item.x + 2 }
+            : item,
+        ),
+    ],
+  };
+}
+
+function gameStateWithBpbPlacementMetadata(gameState: GameState, bpbCache: BpbCache | null): GameState {
+  const stateWithMetadata = {
     ...gameState,
     backpackItems: gameState.backpackItems.map((item) => withBpbPlacementMetadata(item, bpbCache)),
     storageItems: gameState.storageItems.map((item) => withBpbPlacementMetadata(item, bpbCache)),
   };
+
+  return withVisibleRangerStarterBags(stateWithMetadata, bpbCache);
 }
 
 export function recommendNextAction(input: RecommendInput): Recommendation {
