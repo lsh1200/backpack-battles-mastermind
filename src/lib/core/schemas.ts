@@ -75,6 +75,7 @@ export const RecommendationSchema = z.object({
   shortReason: z.string().min(1),
   rejectedAlternatives: z.array(CandidateActionSchema),
   planSupported: z.string().min(1),
+  placementAdvice: z.array(z.string().min(1)).default([]),
   nextTargets: z.array(z.string()),
   assumptionsMade: z.array(z.string()),
   correctionPromptsUsed: z.array(z.string()),

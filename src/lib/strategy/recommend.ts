@@ -10,6 +10,10 @@ type RecommendInput = {
 };
 
 const EARLY_SHOP_PACKAGE_PRIORITY = ["Broom", "Banana", "Stone", "Shiny Shell", "Walrus Tusk"];
+const DEFAULT_PLACEMENT_ADVICE = [
+  "Keep active weapons in bag space and avoid moving them unless a star bonus clearly improves them.",
+  "Before starting battle, check that stamina or support items do not block weapon adjacency.",
+];
 
 function hasGroundedItem(cache: BpbCache | null, itemName: string): boolean {
   if (cache === null) {
@@ -70,7 +74,34 @@ function buyAction(item: ShopItem, value: number, teachingReason: string): Candi
   };
 }
 
-function earlyShopPackageAction(gameState: GameState, bpbCache: BpbCache | null): CandidateAction | null {
+function earlyShopPackagePlacementAdvice(packageItems: ShopItem[]): string[] {
+  const itemNames = new Set(packageItems.map((item) => item.name));
+  const advice = [];
+
+  if (itemNames.has("Broom")) {
+    advice.push("Keep Wooden Sword active and place Broom as the second weapon, not in storage.");
+  }
+
+  if (itemNames.has("Stone")) {
+    advice.push("Put Stone adjacent to Wooden Sword or Broom so it contributes damage immediately.");
+  }
+
+  if (itemNames.has("Banana")) {
+    advice.push("Place Banana where it supports stamina without blocking weapon adjacency.");
+  }
+
+  if (itemNames.has("Shiny Shell") || itemNames.has("Walrus Tusk")) {
+    const extras = ["Shiny Shell", "Walrus Tusk"].filter((itemName) => itemNames.has(itemName)).join(" and ");
+    advice.push(`Fit ${extras} only after the weapon and stamina layout is stable.`);
+  }
+
+  return advice.length ? advice : DEFAULT_PLACEMENT_ADVICE;
+}
+
+function earlyShopPackageAction(
+  gameState: GameState,
+  bpbCache: BpbCache | null,
+): { action: CandidateAction; placementAdvice: string[] } | null {
   if ((gameState.round ?? 99) > 2 || gameState.gold === null) {
     return null;
   }
@@ -100,12 +131,15 @@ function earlyShopPackageAction(gameState: GameState, bpbCache: BpbCache | null)
     remainingGold === 0 ? `uses all ${spentGold} gold` : `uses ${spentGold} of your ${gameState.gold} gold`;
 
   return {
-    type: "buy",
-    target,
-    value: 95,
-    risks: ["Check backpack space before buying every piece; put extras in storage if needed."],
-    assumptions: [],
-    teachingReason: `Buy ${target}: this round-one shopping sequence ${spendText} to add a second weapon, stamina support, and cheap tempo pieces.`,
+    action: {
+      type: "buy",
+      target,
+      value: 95,
+      risks: ["Check backpack space before buying every piece; put extras in storage if needed."],
+      assumptions: [],
+      teachingReason: `Buy ${target}: this round-one shopping sequence ${spendText} to add a second weapon, stamina support, and cheap tempo pieces.`,
+    },
+    placementAdvice: earlyShopPackagePlacementAdvice(packageItems),
   };
 }
 
@@ -142,11 +176,12 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
 
   if (earlyPackageAction) {
     return {
-      bestAction: earlyPackageAction,
-      shortReason: `Buy this shopping sequence now: ${earlyPackageAction.target}. It spends your early gold on grounded tempo instead of over-rolling.`,
+      bestAction: earlyPackageAction.action,
+      shortReason: `Buy this shopping sequence now: ${earlyPackageAction.action.target}. It spends your early gold on grounded tempo instead of over-rolling.`,
       rejectedAlternatives,
       planSupported,
-      nextTargets: ["Place Broom as a second weapon.", "Keep Banana near the bag plan for stamina support.", "Use cheap pieces for tempo, then start battle."],
+      placementAdvice: earlyPackageAction.placementAdvice,
+      nextTargets: ["After placement is stable, start battle.", "Next shop, look for Hero Sword and Whetstone lines."],
       assumptionsMade,
       correctionPromptsUsed,
     };
@@ -165,6 +200,10 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
       shortReason: `Buy the sale ${saleItem.name} because sale items are low-risk tempo while you are still learning.`,
       rejectedAlternatives,
       planSupported,
+      placementAdvice: [
+        `After buying ${saleItem.name}, place it only if it improves an active item this round; otherwise keep the core weapon layout stable.`,
+        "Check the bought item's stars before battle so the bonus touches the intended weapon or support item.",
+      ],
       nextTargets: ["Watch for core plan pieces next shop.", "Avoid rolling below useful gold unless you are chasing a known target."],
       assumptionsMade,
       correctionPromptsUsed,
@@ -184,6 +223,7 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
       shortReason: "Preserve tempo and start the battle instead of spending your last gold on weak early rolls.",
       rejectedAlternatives,
       planSupported,
+      placementAdvice: DEFAULT_PLACEMENT_ADVICE,
       nextTargets: ["Enter the next shop with a clear target.", "Prioritize commons and cheap plan pieces early."],
       assumptionsMade,
       correctionPromptsUsed,
@@ -202,6 +242,7 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
     shortReason: "No grounded buy or pivot is clearly better, so keep tempo and continue the current plan.",
     rejectedAlternatives,
     planSupported,
+    placementAdvice: DEFAULT_PLACEMENT_ADVICE,
     nextTargets: ["Look for plan-defining signpost items.", "Confirm unknown items so advice can become more precise."],
     assumptionsMade,
     correctionPromptsUsed,

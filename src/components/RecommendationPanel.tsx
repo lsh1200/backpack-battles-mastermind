@@ -20,6 +20,16 @@ export function RecommendationPanel({ recommendation }: { recommendation: Recomm
         <h3>Plan</h3>
         <p>{recommendation.planSupported}</p>
       </div>
+      {recommendation.placementAdvice.length ? (
+        <div className="coach-section">
+          <h3>Placement</h3>
+          <ul>
+            {recommendation.placementAdvice.map((placement) => (
+              <li key={placement}>{placement}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <div className="coach-section">
         <h3>Next Targets</h3>
         <ul>

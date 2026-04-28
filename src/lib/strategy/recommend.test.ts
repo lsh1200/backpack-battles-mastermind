@@ -137,6 +137,12 @@ describe("recommendNextAction", () => {
     expect(recommendation.bestAction.target).toBe("Broom, Banana, Stone, Shiny Shell, Walrus Tusk");
     expect(recommendation.shortReason).toContain("shopping sequence");
     expect(recommendation.bestAction.teachingReason).toContain("uses all 13 gold");
+    expect(recommendation.placementAdvice).toEqual([
+      "Keep Wooden Sword active and place Broom as the second weapon, not in storage.",
+      "Put Stone adjacent to Wooden Sword or Broom so it contributes damage immediately.",
+      "Place Banana where it supports stamina without blocking weapon adjacency.",
+      "Fit Shiny Shell and Walrus Tusk only after the weapon and stamina layout is stable.",
+    ]);
   });
 
   it("does not recommend buying a sale item the player cannot afford", () => {
