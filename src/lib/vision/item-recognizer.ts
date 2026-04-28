@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import type { BpbCache, BpbItem } from "@/lib/bpb/schemas";
-import type { BackpackItem, GameState, Recommendation, ShopItem } from "@/lib/core/types";
+import type { BackpackItem, GameState, Recommendation, ShopItem, ValidationReport } from "@/lib/core/types";
 
 type RecognitionSource = Recommendation["recognitionPolicy"]["itemRecognition"];
 
@@ -63,6 +63,7 @@ type TemplateFeature = {
 type RecognizeItemsInput = {
   image: Buffer;
   bpbCache: BpbCache | null;
+  validation?: ValidationReport;
   profile?: RecognitionScreenProfile;
   highConfidenceThreshold?: number;
   minCandidateGap?: number;
@@ -112,6 +113,35 @@ function defaultScreenProfile(width: number, height: number): RecognitionScreenP
       { slot: "bag-left", crop: crop(0.15, 0.22, 0.07, 0.18), x: 0, y: 1 },
       { slot: "bag-center", crop: crop(0.21, 0.20, 0.07, 0.22), x: 1, y: 1 },
       { slot: "bag-right", crop: crop(0.26, 0.23, 0.07, 0.18), x: 2, y: 1 },
+    ],
+  };
+}
+
+function profileFromInventoryGrid(validation: ValidationReport | undefined, width: number, height: number): RecognitionScreenProfile | null {
+  const grid = validation?.regions.find((region) => region.name === "inventoryGrid");
+  if (!grid?.cellWidth || !grid.cellHeight || grid.columns !== 9 || grid.rows !== 7) {
+    return null;
+  }
+  const cellWidth = grid.cellWidth;
+  const cellHeight = grid.cellHeight;
+
+  const fallback = defaultScreenProfile(width, height);
+  const slotCrop = (x: number, y: number, w = 1, h = 1): Crop => ({
+    x: grid.x + x * cellWidth,
+    y: grid.y + y * cellHeight,
+    width: w * cellWidth,
+    height: h * cellHeight,
+  });
+
+  return {
+    shopSlots: fallback.shopSlots,
+    backpackSlots: [
+      { slot: "grid-0-1", crop: slotCrop(0, 1), x: 0, y: 1 },
+      { slot: "grid-1-1", crop: slotCrop(1, 1), x: 1, y: 1 },
+      { slot: "grid-2-0", crop: slotCrop(2, 0), x: 2, y: 0 },
+      { slot: "grid-3-1", crop: slotCrop(3, 1), x: 3, y: 1 },
+      { slot: "grid-4-1", crop: slotCrop(4, 1), x: 4, y: 1 },
+      { slot: "grid-5-1", crop: slotCrop(5, 1), x: 5, y: 1 },
     ],
   };
 }
@@ -374,7 +404,7 @@ export async function recognizeItemsFromScreenshot(input: RecognizeItemsInput): 
     };
   }
 
-  const profile = input.profile ?? defaultScreenProfile(imageWidth, imageHeight);
+  const profile = input.profile ?? profileFromInventoryGrid(input.validation, imageWidth, imageHeight) ?? defaultScreenProfile(imageWidth, imageHeight);
   const threshold = input.highConfidenceThreshold ?? DEFAULT_HIGH_CONFIDENCE_THRESHOLD;
   const minCandidateGap = input.minCandidateGap ?? DEFAULT_MIN_CANDIDATE_GAP;
   const [shop, backpack] = await Promise.all([

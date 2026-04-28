@@ -182,13 +182,41 @@ h1 {
   opacity: 0.55;
 }
 
-.screenshot-preview {
-  display: block;
-  width: 100%;
+.screenshot-preview-frame {
+  position: relative;
+  justify-self: center;
+  width: fit-content;
+  max-width: 100%;
   max-height: 360px;
-  object-fit: contain;
+  overflow: hidden;
   border-radius: 6px;
   background: #050605;
+}
+
+.screenshot-preview {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+}
+
+.screenshot-grid-overlay {
+  position: absolute;
+  border: 2px solid rgba(240, 195, 90, 0.92);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(240, 195, 90, 0.72) 0 1px,
+      transparent 1px calc(100% / var(--overlay-columns))
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(240, 195, 90, 0.72) 0 1px,
+      transparent 1px calc(100% / var(--overlay-rows))
+    );
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
 }
 
 .primary-button {

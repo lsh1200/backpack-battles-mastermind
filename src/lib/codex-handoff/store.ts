@@ -31,6 +31,7 @@ type CreatedCodexHandoff = {
   resultPath: string;
   prompt: string;
   relevantItems: CodexHandoffItem[];
+  validation: ValidationReport;
 };
 
 type CodexHandoffResult =
@@ -212,6 +213,7 @@ export async function createCodexHandoff(input: CreateCodexHandoffInput): Promis
     resultPath: paths.resultPath,
     prompt,
     relevantItems: items,
+    validation: input.validation,
   };
 }
 

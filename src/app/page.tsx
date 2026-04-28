@@ -109,6 +109,7 @@ export default function HomePage() {
         promptPath: json.promptPath,
         resultPath: json.resultPath,
         screenshotPath: json.screenshotPath,
+        validation: json.validation,
       });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Codex handoff failed");
@@ -156,6 +157,7 @@ export default function HomePage() {
         promptPath: json.promptPath,
         resultPath: json.resultPath,
         screenshotPath: json.screenshotPath,
+        validation: json.validation,
       });
       setCorrections({});
 
@@ -269,6 +271,7 @@ export default function HomePage() {
         busy={busy}
         mode={mode}
         previewUrl={previewUrl}
+        validation={result?.validation ?? handoff?.validation ?? null}
         onAnalyze={() => analyze()}
         onFile={handleFile}
         onModeChange={setMode}

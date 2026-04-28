@@ -53,6 +53,11 @@ export const ValidationRegionSchema = z.object({
   y: z.number(),
   width: z.number(),
   height: z.number(),
+  columns: z.number().int().positive().optional(),
+  rows: z.number().int().positive().optional(),
+  cellWidth: z.number().positive().optional(),
+  cellHeight: z.number().positive().optional(),
+  source: z.string().min(1).optional(),
   occupiedRatio: z.number().min(0).max(1).optional(),
 });
 

@@ -1,0 +1,35 @@
+{
+  "id": "round1-inventory-grid-guide",
+  "source": "user-attached in-game screenshot, April 28 2026",
+  "purpose": "Reference image for anchoring the Backpack Battles inventory grid to the visible in-game board.",
+  "imagePath": "data/grid-guides/round1-inventory-grid-guide.png",
+  "imageSize": {
+    "width": 340,
+    "height": 191
+  },
+  "grid": {
+    "columns": 9,
+    "rows": 7,
+    "left": 8,
+    "top": 10,
+    "cellWidth": 14,
+    "cellHeight": 14,
+    "width": 126,
+    "height": 98
+  },
+  "anchors": {
+    "inventoryTitle": {
+      "approxCenterX": 69,
+      "approxCenterY": 10
+    },
+    "firstVisibleGridCell": {
+      "x": 8,
+      "y": 10
+    }
+  },
+  "notes": [
+    "Use the Inventory title as a local anchor, then fit the 9x7 grid below and slightly left of that title.",
+    "The visible starting bag cluster is inside this full 9x7 inventory board; do not crop the grid to the cluster.",
+    "Cells without bag space should still render as dark board cells, while bag-covered cells show the actual bag sprites."
+  ]
+}

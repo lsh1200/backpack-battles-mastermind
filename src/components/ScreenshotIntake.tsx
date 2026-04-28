@@ -2,10 +2,12 @@
 
 /* eslint-disable @next/next/no-img-element -- User-selected blob URLs are local previews, not optimized app assets. */
 
-import { useRef } from "react";
+import { useRef, type CSSProperties } from "react";
+import type { ValidationReport } from "@/lib/core/types";
 
 type ScreenshotIntakeProps = {
   previewUrl: string | null;
+  validation: ValidationReport | null;
   busy: boolean;
   mode: "api" | "codex";
   onFile: (file: File) => void;
@@ -15,6 +17,7 @@ type ScreenshotIntakeProps = {
 
 export function ScreenshotIntake({
   previewUrl,
+  validation,
   busy,
   mode,
   onFile,
@@ -22,6 +25,18 @@ export function ScreenshotIntake({
   onAnalyze,
 }: ScreenshotIntakeProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const grid = validation?.regions.find((region) => region.name === "inventoryGrid");
+  const image = validation?.image;
+  const gridStyle = grid && image
+    ? {
+        left: `${(grid.x / image.width) * 100}%`,
+        top: `${(grid.y / image.height) * 100}%`,
+        width: `${(grid.width / image.width) * 100}%`,
+        height: `${(grid.height / image.height) * 100}%`,
+        "--overlay-columns": grid.columns ?? 9,
+        "--overlay-rows": grid.rows ?? 7,
+      } as CSSProperties
+    : undefined;
 
   return (
     <section className="panel intake-panel" aria-label="Screenshot upload">
@@ -59,7 +74,10 @@ export function ScreenshotIntake({
         </button>
       </div>
       {previewUrl ? (
-        <img alt="Uploaded Backpack Battles screenshot" className="screenshot-preview" src={previewUrl} />
+        <div className="screenshot-preview-frame">
+          <img alt="Uploaded Backpack Battles screenshot" className="screenshot-preview" src={previewUrl} />
+          {gridStyle ? <span aria-hidden="true" className="screenshot-grid-overlay" style={gridStyle} /> : null}
+        </div>
       ) : null}
       <button className="primary-button" disabled={!previewUrl || busy} type="button" onClick={onAnalyze}>
         {busy ? "Working..." : mode === "api" ? "Analyze round" : "Create Codex handoff"}

@@ -90,7 +90,7 @@ export async function POST(request: Request) {
 
     const image = Buffer.from(await file.arrayBuffer());
     const [bpbCache, validation] = await Promise.all([readBpbCache(), validateScreenshotPixels(image)]);
-    const itemRecognitionReport = await recognizeItemsFromScreenshot({ image, bpbCache });
+    const itemRecognitionReport = await recognizeItemsFromScreenshot({ image, bpbCache, validation });
     const handoff = await createCodexHandoff({
       bpbCache,
       image,
@@ -106,6 +106,7 @@ export async function POST(request: Request) {
       promptPath: handoff.promptPath,
       resultPath: handoff.resultPath,
       screenshotPath: handoff.screenshotPath,
+      validation: handoff.validation,
     });
   } catch (error) {
     return NextResponse.json(
@@ -172,6 +173,7 @@ export async function GET(request: Request) {
       promptPath: handoff.promptPath,
       resultPath: handoff.resultPath,
       screenshotPath: handoff.screenshotPath,
+      validation: handoff.validation,
     };
 
     if (handoffResult.status === "pending") {

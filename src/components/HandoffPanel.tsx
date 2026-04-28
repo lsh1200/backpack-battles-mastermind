@@ -1,3 +1,5 @@
+import type { ValidationReport } from "@/lib/core/types";
+
 type CodexHandoffState = {
   handoffId: string;
   status: "pending" | "complete";
@@ -5,6 +7,7 @@ type CodexHandoffState = {
   promptPath: string;
   resultPath: string;
   screenshotPath: string;
+  validation?: ValidationReport;
 };
 
 export function HandoffPanel({ handoff }: { handoff: CodexHandoffState | null }) {

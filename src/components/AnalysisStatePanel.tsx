@@ -12,6 +12,7 @@ export function AnalysisStatePanel({ result }: { result: AnalysisResult | null }
   const { gameState, validation } = result;
   const shopItems = gameState.shopItems.map((item) => item.name).join(", ");
   const backpackItems = gameState.backpackItems.map((item) => item.name).join(", ");
+  const inventoryGrid = validation.regions.find((region) => region.name === "inventoryGrid");
 
   return (
     <section className="panel">
@@ -44,6 +45,12 @@ export function AnalysisStatePanel({ result }: { result: AnalysisResult | null }
         <p>
           <strong>Backpack:</strong> {backpackItems || "No backpack items read"}
         </p>
+        {inventoryGrid ? (
+          <p>
+            <strong>Inventory grid:</strong> {inventoryGrid.columns ?? 9}x{inventoryGrid.rows ?? 7} at{" "}
+            {Math.round(inventoryGrid.x)}, {Math.round(inventoryGrid.y)}
+          </p>
+        ) : null}
       </div>
       {validation.warnings.length ? (
         <ul className="warning-list">

@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import type { BpbCache } from "@/lib/bpb/schemas";
-import type { GameState } from "@/lib/core/types";
+import type { GameState, ValidationReport } from "@/lib/core/types";
 import {
   applyItemRecognitionToGameState,
   type ItemRecognitionReport,
@@ -55,6 +55,35 @@ async function screenshotWithSquare(color: string): Promise<Buffer> {
   return base;
 }
 
+async function screenshotWithGridSquare(color: string): Promise<Buffer> {
+  return sharp({
+    create: {
+      width: 160,
+      height: 112,
+      channels: 4,
+      background: "#111111",
+    },
+  })
+    .composite([
+      {
+        input: await sharp({
+          create: {
+            width: 10,
+            height: 10,
+            channels: 4,
+            background: color,
+          },
+        })
+          .png()
+          .toBuffer(),
+        left: 16,
+        top: 30,
+      },
+    ])
+    .png()
+    .toBuffer();
+}
+
 async function cache(): Promise<BpbCache> {
   return {
     fetchedAt: "2026-04-28T00:00:00.000Z",
@@ -94,6 +123,26 @@ async function cache(): Promise<BpbCache> {
 const profile: RecognitionScreenProfile = {
   shopSlots: [{ slot: "shop-1", crop: { x: 24, y: 20, width: 32, height: 32 } }],
   backpackSlots: [],
+};
+
+const gridValidation: ValidationReport = {
+  image: { width: 160, height: 112, orientation: "landscape" },
+  regions: [
+    {
+      name: "inventoryGrid",
+      x: 16,
+      y: 20,
+      width: 90,
+      height: 70,
+      columns: 9,
+      rows: 7,
+      cellWidth: 10,
+      cellHeight: 10,
+      source: "detected-grid",
+    },
+  ],
+  warnings: [],
+  requiresConfirmation: [],
 };
 
 function baseGameState(overrides: Partial<GameState> = {}): GameState {
@@ -154,6 +203,25 @@ describe("deterministic item recognizer", () => {
     expect(report.uncertainFields).toEqual(["shopItems.0.name"]);
     expect(report.candidateOptionsByField["shopItems.0.name"]).toHaveLength(3);
     expect(report.warnings[0]).toContain("local template confidence");
+  });
+
+  it("derives backpack crop slots from the detected inventory grid", async () => {
+    const report = await recognizeItemsFromScreenshot({
+      image: await screenshotWithGridSquare("#f7d547"),
+      bpbCache: await cache(),
+      validation: gridValidation,
+      highConfidenceThreshold: 0.7,
+      minCandidateGap: 0,
+    });
+
+    expect(report.matches.some((match) => match.region === "backpack" && match.slot === "grid-0-1")).toBe(true);
+    expect(report.backpackItems).toContainEqual(
+      expect.objectContaining({
+        name: "Banana",
+        x: 0,
+        y: 1,
+      }),
+    );
   });
 
   it("applies deterministic item names over vision item guesses while preserving shop metadata", async () => {

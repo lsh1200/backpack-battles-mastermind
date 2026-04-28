@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       : await recognizeItemsFromScreenshot({
           image: image as Buffer,
           bpbCache,
+          validation,
         });
     const gameState = hasCorrectedState
       ? GameStateSchema.parse(JSON.parse(String(correctedState)))
