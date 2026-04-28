@@ -27,6 +27,10 @@ const bpbCache: BpbCache = {
       aliases: ["broom"],
       imageUrl: "https://awerc.github.io/bpb-cdn/i/Broom.webp",
       grounded: true,
+      type: "Melee Weapon",
+      shape: [[0, 1], [0, 1], [0, 1], [0, 1]],
+      gridWidth: 2,
+      gridHeight: 4,
       tags: [],
     },
     {
@@ -35,6 +39,9 @@ const bpbCache: BpbCache = {
       aliases: ["stone"],
       imageUrl: "https://awerc.github.io/bpb-cdn/i/Stone.webp",
       grounded: true,
+      shape: [[1]],
+      gridWidth: 1,
+      gridHeight: 1,
       tags: [],
     },
     {
@@ -43,6 +50,14 @@ const bpbCache: BpbCache = {
       aliases: ["banana"],
       imageUrl: "https://awerc.github.io/bpb-cdn/i/Banana.webp",
       grounded: true,
+      shape: [
+        [0, 2, 0, 0],
+        [2, 1, 2, 0],
+        [2, 1, 1, 2],
+        [0, 2, 2, 0],
+      ],
+      gridWidth: 4,
+      gridHeight: 4,
       tags: [],
     },
     {
@@ -51,6 +66,9 @@ const bpbCache: BpbCache = {
       aliases: ["shiny shell", "shinyshell"],
       imageUrl: "https://awerc.github.io/bpb-cdn/i/ShinyShell.webp",
       grounded: true,
+      shape: [[2, 1, 2]],
+      gridWidth: 3,
+      gridHeight: 1,
       tags: [],
     },
     {
@@ -59,6 +77,9 @@ const bpbCache: BpbCache = {
       aliases: ["walrus tusk", "walrustusk"],
       imageUrl: "https://awerc.github.io/bpb-cdn/i/WalrusTusk.webp",
       grounded: true,
+      shape: [[1], [1]],
+      gridWidth: 1,
+      gridHeight: 2,
       tags: [],
     },
     {
@@ -247,8 +268,12 @@ describe("recommendNextAction", () => {
     expect(recommendation.placementAdvice.join(" ")).toContain("Known bag space was considered");
     expect(recommendation.placementAdvice.join(" ")).not.toContain("Ranger Bag footprint is unknown");
     expect(recommendation.layoutOptions[0].cells.length).toBeGreaterThan(0);
-    expect(recommendation.layoutOptions[0].cells.every((cell) => cell.x >= 0 && cell.x <= 1 && cell.y >= 0 && cell.y <= 2)).toBe(
-      true,
+    expect(recommendation.layoutOptions[0].cells.every((cell) => cell.x >= 0 && cell.x <= 1 && cell.y >= 0 && cell.y <= 2)).toBe(true);
+    expect(recommendation.layoutOptions[0].cells).toContainEqual(
+      expect.objectContaining({ item: "Wooden Sword", width: 1, height: 2, shape: [[1], [1]] }),
+    );
+    expect(recommendation.layoutOptions[0].benchItems.map((item) => item.item)).toEqual(
+      expect.arrayContaining(["Broom", "Banana"]),
     );
   });
 

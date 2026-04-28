@@ -162,7 +162,20 @@ function ungroundedItemAssumptions(gameState: GameState, bpbCache: BpbCache | nu
 
 function footprintCellsFromShape(shape: BpbItem["shape"]): NonNullable<BackpackItem["footprint"]>["cells"] {
   return (shape ?? []).flatMap((row, y) =>
-    row.flatMap((value, x) => (value > 0 ? [{ x, y }] : [])),
+    row.flatMap((value, x) => (value === 1 ? [{ x, y }] : [])),
+  );
+}
+
+function itemShapesByName(itemNames: string[], bpbCache: BpbCache | null): Record<string, number[][]> {
+  if (!bpbCache) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    itemNames.flatMap((itemName) => {
+      const item = findBpbItemByName(bpbCache, itemName);
+      return item?.grounded && item.shape ? [[itemName, item.shape] as const] : [];
+    }),
   );
 }
 
@@ -222,7 +235,14 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
 
   if (earlyPackageAction) {
     const placementState = gameStateWithBpbPlacementMetadata(gameState, bpbCache);
-    const placementPlan = optimizePlacement({ gameState: placementState, targetItems: earlyPackageAction.targetItems });
+    const placementPlan = optimizePlacement({
+      gameState: placementState,
+      targetItems: earlyPackageAction.targetItems,
+      itemShapes: itemShapesByName(
+        [...placementState.backpackItems.map((item) => item.name), ...earlyPackageAction.targetItems],
+        bpbCache,
+      ),
+    });
 
     return {
       bestAction: earlyPackageAction.action,
@@ -242,7 +262,11 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
   );
   if (saleItem) {
     const placementState = gameStateWithBpbPlacementMetadata(gameState, bpbCache);
-    const placementPlan = optimizePlacement({ gameState: placementState, targetItems: [saleItem.name] });
+    const placementPlan = optimizePlacement({
+      gameState: placementState,
+      targetItems: [saleItem.name],
+      itemShapes: itemShapesByName([...placementState.backpackItems.map((item) => item.name), saleItem.name], bpbCache),
+    });
 
     return {
       bestAction: buyAction(
@@ -263,7 +287,11 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
 
   if ((gameState.round ?? 1) <= 3 && (gameState.gold ?? 0) <= 2 && gameState.shopItems.length === 0) {
     const placementState = gameStateWithBpbPlacementMetadata(gameState, bpbCache);
-    const placementPlan = optimizePlacement({ gameState: placementState, targetItems: [] });
+    const placementPlan = optimizePlacement({
+      gameState: placementState,
+      targetItems: [],
+      itemShapes: itemShapesByName(placementState.backpackItems.map((item) => item.name), bpbCache),
+    });
 
     return {
       bestAction: {
@@ -286,7 +314,11 @@ export function recommendNextAction(input: RecommendInput): Recommendation {
   }
 
   const placementState = gameStateWithBpbPlacementMetadata(gameState, bpbCache);
-  const placementPlan = optimizePlacement({ gameState: placementState, targetItems: [] });
+  const placementPlan = optimizePlacement({
+    gameState: placementState,
+    targetItems: [],
+    itemShapes: itemShapesByName(placementState.backpackItems.map((item) => item.name), bpbCache),
+  });
 
   return {
     bestAction: {

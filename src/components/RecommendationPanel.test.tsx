@@ -34,8 +34,15 @@ const recommendation = {
       moves: ["Keep Wooden Sword at (1, 1).", "Place Broom at (2, 1) as your second active weapon."],
       tradeoffs: ["Less flexible utility space."],
       cells: [
-        { item: "Wooden Sword", x: 1, y: 1, width: 1, height: 1, role: "primary weapon" },
-        { item: "Broom", x: 2, y: 1, width: 1, height: 1, role: "second weapon" },
+        { item: "Wooden Sword", x: 1, y: 1, width: 1, height: 2, shape: [[1], [1]], role: "primary weapon" },
+        { item: "Stone", x: 0, y: 0, width: 1, height: 1, shape: [[1]], role: "weapon damage adjacency" },
+      ],
+      benchItems: [
+        {
+          item: "Broom",
+          reason: "Keep in storage for now; it does not fit in the known active bag space.",
+          shape: [[0, 1], [0, 1], [0, 1], [0, 1]],
+        },
       ],
     },
     {
@@ -46,6 +53,7 @@ const recommendation = {
       moves: ["Place Banana at (0, 2)."],
       tradeoffs: ["Slightly less weapon adjacency."],
       cells: [{ item: "Banana", x: 0, y: 2, width: 1, height: 1, role: "stamina support" }],
+      benchItems: [],
     },
   ],
   nextTargets: ["Start battle after arranging the board."],
@@ -66,6 +74,8 @@ describe("RecommendationPanel", () => {
     expect(markup).toContain("Stamina Safe");
     expect(markup).toContain("Wooden Sword");
     expect(markup).toContain("Broom");
+    expect(markup).toContain("Storage for now");
+    expect(markup).toContain("Broom footprint");
     expect(markup).toContain("Item Recognition");
     expect(markup).toContain("local-first");
   });

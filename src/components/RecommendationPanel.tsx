@@ -8,8 +8,41 @@ function layoutConfidenceLabel(confidence: Recommendation["layoutConfidence"]): 
     .join(" ");
 }
 
+function shapeDimensions(shape: number[][] | undefined): { columns: number; rows: number } {
+  return {
+    columns: Math.max(1, ...(shape ?? [[1]]).map((row) => row.length)),
+    rows: Math.max(1, shape?.length ?? 1),
+  };
+}
+
+function ItemShape({ label, shape }: { label: string; shape?: number[][] }) {
+  const dimensions = shapeDimensions(shape);
+  const resolvedShape = shape ?? [[1]];
+  const style = {
+    "--shape-columns": dimensions.columns,
+    "--shape-rows": dimensions.rows,
+  } as CSSProperties;
+
+  return (
+    <div className="item-shape" style={style} aria-label={`${label} footprint`}>
+      {Array.from({ length: dimensions.rows }).flatMap((_, y) =>
+        Array.from({ length: dimensions.columns }).map((__, x) => {
+          const value = resolvedShape[y]?.[x] ?? 0;
+          return (
+            <span
+              aria-hidden="true"
+              className={`shape-cell ${value === 1 ? "filled" : value > 1 ? "marker" : "empty"}`}
+              key={`${label}-${x}-${y}`}
+            />
+          );
+        }),
+      )}
+    </div>
+  );
+}
+
 function LayoutOptionCard({ option }: { option: Recommendation["layoutOptions"][number] }) {
-  const columns = Math.max(4, ...option.cells.map((cell) => cell.x + cell.width));
+  const columns = Math.max(2, ...option.cells.map((cell) => cell.x + cell.width));
   const rows = Math.max(3, ...option.cells.map((cell) => cell.y + cell.height));
   const gridStyle = {
     "--layout-columns": columns,
@@ -26,6 +59,16 @@ function LayoutOptionCard({ option }: { option: Recommendation["layoutOptions"][
         <span>{option.score}</span>
       </div>
       <div className="layout-grid" style={gridStyle}>
+        {Array.from({ length: rows }).flatMap((_, y) =>
+          Array.from({ length: columns }).map((__, x) => (
+            <span
+              aria-hidden="true"
+              className="layout-board-cell"
+              key={`${option.id}-board-${x}-${y}`}
+              style={{ gridColumn: x + 1, gridRow: y + 1 }}
+            />
+          )),
+        )}
         {option.cells.map((cell) => (
           <div
             className="layout-cell"
@@ -35,11 +78,29 @@ function LayoutOptionCard({ option }: { option: Recommendation["layoutOptions"][
               gridRow: `${cell.y + 1} / span ${cell.height}`,
             }}
           >
+            <ItemShape label={cell.item} shape={cell.shape} />
             <strong>{cell.item}</strong>
+            {cell.rotation ? <span>Rotate {cell.rotation} deg</span> : null}
             {cell.role ? <span>{cell.role}</span> : null}
           </div>
         ))}
       </div>
+      {option.benchItems.length ? (
+        <div className="bench-items">
+          <h5>Storage for now</h5>
+          <div className="bench-list">
+            {option.benchItems.map((item) => (
+              <div className="bench-item" key={`${option.id}-${item.item}`}>
+                <ItemShape label={item.item} shape={item.shape} />
+                <div>
+                  <strong>{item.item}</strong>
+                  <span>{item.reason}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="layout-details">
         <h5>Moves</h5>
         <ul>
