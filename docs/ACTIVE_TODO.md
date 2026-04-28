@@ -34,6 +34,82 @@ This file is the source of truth for what Codex should do next. It exists to pre
 
 ## Active Task
 
+### Task 17: Bag-Aware Board Model
+
+Status: `ready`
+
+Goal: Replace the current loose coordinate model with a Backpack Battles board model that understands bags as movable container items. Placement advice must know which board cells are unlocked by bag footprints, which items are inside those bags, and which cells are storage or unusable.
+
+Problem: The current optimizer can render layout options, but it still treats item coordinates too generically. In Backpack Battles, bags are items placed on the wider board, and other items are active only when they occupy cells inside bag space. Assuming the full board is usable, or treating `(0, 0)` as meaningful without bag context, can teach wrong arrangements.
+
+Do Not Drift:
+
+- Do not implement the board-position correction UI yet unless a tiny UI change is required to expose model output.
+- Do not assume the whole 10x6 board is unlocked or active.
+- Do not invent bag shapes, item shapes, rotations, or star cells when local BPB data does not provide them.
+- Do not let the LLM decide bag occupancy from raw image recognition. Use deterministic/model data first, then ask for confirmation when uncertain.
+- Keep the first version focused on board semantics and optimizer inputs, not perfect screenshot segmentation.
+
+Expected Files:
+
+- Modify: `src/lib/placement/board.ts`
+- Modify: `src/lib/placement/optimizer.ts`
+- Modify: `src/lib/placement/optimizer.test.ts`
+- Modify: `src/lib/core/schemas.ts`
+- Modify or create tests for schema changes.
+- Modify: `src/lib/strategy/recommend.ts`
+- Modify: `src/components/RecommendationPanel.tsx` only if needed to show bag-aware confidence/output.
+- Modify: `docs/ACTIVE_TODO.md`
+
+Required Behavior:
+
+- Board model represents the full board separately from active bag cells.
+- Bag items have a placement, shape/footprint source, and unlocked cells when known.
+- Backpack items can be classified as `inside-bag`, `outside-bag`, `partial`, or `unknown`.
+- Optimizer must refuse to claim an exact final layout when bag placement or bag shape is unknown.
+- Recommendation must explain whether bag space was considered.
+- Existing rendered layout options must be generated from active bag cells, not from the full board by default.
+- If current data is incomplete, the app should ask for bag placement/shape confirmation instead of giving fake precision.
+
+Implementation Steps:
+
+- [ ] Step 1: Mark this task `in_progress`.
+- [ ] Step 2: Add failing board-model tests for one placed bag unlocking only its footprint cells.
+- [ ] Step 3: Add failing tests that classify items as inside, outside, partial, or unknown relative to bag cells.
+- [ ] Step 4: Add failing optimizer test proving full-board placement is not used when bag cells are known.
+- [ ] Step 5: Implement the minimal bag-aware board helpers.
+- [ ] Step 6: Wire optimizer/recommendation confidence to the bag-aware model.
+- [ ] Step 7: Update UI text only as needed so the user can see bag-space confidence.
+- [ ] Step 8: Run targeted placement/strategy/schema/UI tests.
+- [ ] Step 9: Run full verification:
+
+```powershell
+npm.cmd run lint
+npx.cmd tsc --noEmit -p tsconfig.json
+npm.cmd run test
+npm.cmd run build
+```
+
+- [ ] Step 10: Browser-check handoff resume with `1331d7ff-2153-4168-8223-beefd02a1d69`.
+- [ ] Step 11: Commit with message `feat: add bag-aware board model`.
+- [ ] Step 12: Push `codex/task-1-scaffold`.
+- [ ] Step 13: Mark this task `done` and record the commit hash.
+
+Acceptance Checklist:
+
+- [ ] The optimizer distinguishes full board, active bag cells, and unusable cells.
+- [ ] The optimizer does not place items outside known active bag space.
+- [ ] The recommendation explains when bag placement was considered or is missing.
+- [ ] Tests cover known bag placement, unknown bag placement, and item occupancy classification.
+- [ ] No LLM prompt or recommendation implies raw image guessing is authoritative for bag occupancy.
+
+Verification Evidence:
+
+- Commit: pending.
+- Verification: pending.
+
+## Completed Tasks
+
 ### Task 11: Layout-Aware Placement Optimizer v1
 
 Status: `done`
@@ -194,9 +270,3 @@ Goal: Show the recommended arrangement as an overlay or simple grid diagram so t
 Status: `backlog`
 
 Goal: Store user-confirmed item names and positions from Android screenshots to improve recognition for Henry's device layout over time.
-
-### Task 17: Bag-Aware Container Model
-
-Status: `backlog`
-
-Goal: Model Backpack Battles bags as movable container items that define active inventory space, rather than treating the whole board or raw `(x, y)` reads as unlocked usable space. Future placement advice should distinguish storage, active bag space, bag item placement, and items partially or fully inside a bag.
