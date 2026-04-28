@@ -2,6 +2,8 @@
 import type { CSSProperties } from "react";
 import type { Recommendation } from "@/lib/core/types";
 
+const BPB_BOARD_DIMENSIONS = { width: 9, height: 7 };
+
 function layoutConfidenceLabel(confidence: Recommendation["layoutConfidence"]): string {
   return confidence
     .split("-")
@@ -147,10 +149,19 @@ function LayoutOptionCard({ option }: { option: Recommendation["layoutOptions"][
       );
   const minX = Math.min(0, ...boardCells.map((cell) => cell.x), ...option.cells.map((cell) => cell.x));
   const minY = Math.min(0, ...boardCells.map((cell) => cell.y), ...option.cells.map((cell) => cell.y));
-  const maxX = Math.max(1, ...boardCells.map((cell) => cell.x + 1), ...option.cells.map((cell) => cell.x + cell.width));
-  const maxY = Math.max(2, ...boardCells.map((cell) => cell.y + 1), ...option.cells.map((cell) => cell.y + cell.height));
-  const columns = Math.max(2, maxX - minX);
-  const rows = Math.max(3, maxY - minY);
+  const boardDimensions = option.boardDimensions ?? BPB_BOARD_DIMENSIONS;
+  const maxX = Math.max(
+    boardDimensions.width,
+    ...boardCells.map((cell) => cell.x + 1),
+    ...option.cells.map((cell) => cell.x + cell.width),
+  );
+  const maxY = Math.max(
+    boardDimensions.height,
+    ...boardCells.map((cell) => cell.y + 1),
+    ...option.cells.map((cell) => cell.y + cell.height),
+  );
+  const columns = Math.max(BPB_BOARD_DIMENSIONS.width, maxX - minX);
+  const rows = Math.max(BPB_BOARD_DIMENSIONS.height, maxY - minY);
   const activeBoardCellKeys = new Set(boardCells.map((cell) => `${cell.x},${cell.y}`));
   const displayCells = Array.from({ length: rows }).flatMap((_, y) =>
     Array.from({ length: columns }).map((__, x) => ({ x: minX + x, y: minY + y })),

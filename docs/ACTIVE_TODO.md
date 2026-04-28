@@ -45,7 +45,7 @@ Problem: The current optimizer can render layout options, but it still treats it
 Do Not Drift:
 
 - Do not implement the board-position correction UI yet unless a tiny UI change is required to expose model output.
-- Do not assume the whole 10x6 board is unlocked or active.
+- Do not assume the whole 9x7 board is unlocked or active.
 - Do not invent bag shapes, item shapes, rotations, or star cells when local BPB data does not provide them.
 - Do not let the LLM decide bag occupancy from raw image recognition. Use deterministic/model data first, then ask for confirmation when uncertain.
 - Keep the first version focused on board semantics and optimizer inputs, not perfect screenshot segmentation.

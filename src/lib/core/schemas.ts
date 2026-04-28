@@ -113,6 +113,11 @@ export const LayoutBenchItemSchema = z.object({
   imageUrl: z.string().url().optional(),
 });
 
+export const BoardDimensionsSchema = z.object({
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
+
 export const LayoutOptionSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
@@ -120,6 +125,7 @@ export const LayoutOptionSchema = z.object({
   summary: z.string().min(1),
   moves: z.array(z.string().min(1)),
   tradeoffs: z.array(z.string().min(1)),
+  boardDimensions: BoardDimensionsSchema.default({ width: 9, height: 7 }),
   boardCells: z.array(FootprintCellSchema).default([]),
   cells: z.array(LayoutCellSchema),
   benchItems: z.array(LayoutBenchItemSchema).default([]),

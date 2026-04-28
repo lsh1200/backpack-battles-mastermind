@@ -202,7 +202,7 @@ describe("optimizePlacement", () => {
       }),
     );
 
-    expect(board.fullBoard).toEqual({ width: 10, height: 6 });
+    expect(board.fullBoard).toEqual({ width: 9, height: 7 });
     expect(board.activeBagCells).toEqual([
       { x: 2, y: 1 },
       { x: 3, y: 1 },
@@ -215,7 +215,7 @@ describe("optimizePlacement", () => {
 
   it("classifies item occupancy against active bag cells", () => {
     const board: BagAwareBoard = {
-      fullBoard: { width: 10, height: 6 },
+      fullBoard: { width: 9, height: 7 },
       bags: [],
       activeBagCells: [
         { x: 1, y: 1 },

@@ -7,6 +7,7 @@ This file is the project reference for Backpack Battles placement behavior used 
 - BPB source checked: `https://bpb-builds.vercel.app/` and its client chunks from the local BPB cache workflow.
 - Local cache fields used by this app: `data/bpb/cache.json` item `shape`, `gridWidth`, `gridHeight`, `type`, `sockets`, `extraShapes`, `rowOffset`, and `colOffset`.
 - BPB client behavior observed on April 28, 2026: rotation is handled in 90 degree steps, and occupied cells are derived only from shape value `1`.
+- BPB build pages render the backpack board as a 9 column by 7 row grid. The whole 9x7 board should be visible, but only cells covered by bag `1` cells are active bag space.
 
 ## Shape Values
 

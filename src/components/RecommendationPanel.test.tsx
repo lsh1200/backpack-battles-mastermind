@@ -33,6 +33,7 @@ const recommendation = {
       summary: "Prioritizes two active weapons.",
       moves: ["Keep Wooden Sword at (1, 1).", "Place Broom at (2, 1) as your second active weapon."],
       tradeoffs: ["Less flexible utility space."],
+      boardDimensions: { width: 9, height: 7 },
       boardCells: [
         { x: 0, y: 0 },
         { x: 1, y: 0 },
@@ -79,6 +80,7 @@ const recommendation = {
       summary: "Keeps Banana safer.",
       moves: ["Place Banana at (0, 2)."],
       tradeoffs: ["Slightly less weapon adjacency."],
+      boardDimensions: { width: 9, height: 7 },
       boardCells: [],
       cells: [{ item: "Banana", x: 0, y: 2, width: 1, height: 1, role: "stamina support" }],
       benchItems: [],

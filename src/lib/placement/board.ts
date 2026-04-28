@@ -27,7 +27,7 @@ export type BagAwareBoard = {
   missingBagData: string[];
 };
 
-const DEFAULT_BOARD: BoardDimensions = { width: 10, height: 6 };
+const DEFAULT_BOARD: BoardDimensions = { width: 9, height: 7 };
 
 export function hasCoordinates(item: BackpackItem): item is ReadableBackpackItem {
   return item.x !== undefined && item.y !== undefined;

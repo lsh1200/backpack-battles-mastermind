@@ -303,6 +303,7 @@ function buildOption(input: {
   score: number;
   summary: string;
   tradeoffs: string[];
+  boardDimensions: { width: number; height: number };
   boardCells: { x: number; y: number }[];
   cells: PlannedCell[];
   benchItems: BenchItem[];
@@ -316,6 +317,7 @@ function buildOption(input: {
     summary: input.summary,
     moves: movesFor(input.cells, input.gameState, input.layoutConfidence),
     tradeoffs: input.tradeoffs,
+    boardDimensions: input.boardDimensions,
     boardCells: input.boardCells,
     cells: input.cells,
     benchItems: input.benchItems,
@@ -405,6 +407,7 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
         score: 92,
         summary: "Best when you want immediate round-one damage: two active weapons, Stone touching a weapon, Banana fitted after.",
         tradeoffs: ["Less flexible utility space because damage pieces get first claim on the board."],
+        boardDimensions: board.fullBoard,
         boardCells: board.activeBagCells,
         cells: tempoCells,
         benchItems: tempoPlan.benchItems,
@@ -417,6 +420,7 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
         score: 86,
         summary: "Best when you are worried about stamina/space: Banana is protected first, then damage pieces fit around it.",
         tradeoffs: ["Slightly safer stamina support, but less aggressive than the tempo weapon layout."],
+        boardDimensions: board.fullBoard,
         boardCells: board.activeBagCells,
         cells: staminaCells,
         benchItems: staminaPlan.benchItems,
