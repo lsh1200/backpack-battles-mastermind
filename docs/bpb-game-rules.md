@@ -41,6 +41,7 @@ The Banana body occupies the three `1` cells. The `2` cells are star markers and
 - Items must fit all of their physical `1` cells inside active bag cells.
 - Bag identity matters. BPB bag effects are attached to the item type, not just the covered cells, so the optimizer must keep the actual bag item (`Leather Bag`, `Ranger Bag`, `Potion Belt`, etc.) when deriving active space.
 - Ranger round-one screenshots can show a Ranger Bag between two visible 2x2 Leather Bags. Those side groups must be modeled as actual `Leather Bag` bag items, not generic starter cells, because bag type controls shape and item-inside effects.
+- In the round-one Ranger grid guide, the starter bag cluster is anchored inside the full 9x7 inventory instead of at the grid origin: Ranger Bag begins at `(2, 2)`, with Leather Bags at `(0, 3)` and `(4, 3)`. The top two full-board rows can therefore be visible black/no-bag cells.
 
 ## Item Placement
 

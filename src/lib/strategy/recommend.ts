@@ -12,6 +12,7 @@ type RecommendInput = {
 };
 
 const EARLY_SHOP_PACKAGE_PRIORITY = ["Broom", "Banana", "Stone", "Shiny Shell", "Walrus Tusk"];
+const RANGER_STARTER_CLUSTER_OFFSET = { x: 0, y: 2 };
 
 function hasGroundedItem(cache: BpbCache | null, itemName: string): boolean {
   if (cache === null) {
@@ -233,7 +234,10 @@ function withVisibleRangerStarterBags(gameState: GameState, bpbCache: BpbCache |
   if (!rangerBag || rangerBag.x === undefined || rangerBag.y === undefined) {
     return gameState;
   }
-  const rangerOrigin = { x: rangerBag.x, y: rangerBag.y };
+  const rangerOrigin = {
+    x: rangerBag.x + RANGER_STARTER_CLUSTER_OFFSET.x,
+    y: rangerBag.y + RANGER_STARTER_CLUSTER_OFFSET.y,
+  };
 
   const rangerBagItem = bpbCache ? findBpbItemByName(bpbCache, "Ranger Bag") : undefined;
   const leatherBagItem = bpbCache ? findBpbItemByName(bpbCache, "Leather Bag") : undefined;
@@ -278,7 +282,11 @@ function withVisibleRangerStarterBags(gameState: GameState, bpbCache: BpbCache |
         .filter((item) => item !== rangerBag)
         .map((item) =>
           shouldShiftVisibleItems && item.location === "bag" && item.itemKind !== "bag" && item.x !== undefined
-            ? { ...item, x: item.x + 2 }
+            ? {
+                ...item,
+                x: item.x + 2 + RANGER_STARTER_CLUSTER_OFFSET.x,
+                y: (item.y ?? 0) + RANGER_STARTER_CLUSTER_OFFSET.y,
+              }
             : item,
         ),
     ],

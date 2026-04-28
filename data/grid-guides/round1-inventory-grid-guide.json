@@ -17,6 +17,17 @@
     "width": 126,
     "height": 98
   },
+  "starterCluster": {
+    "columns": 6,
+    "rows": 3,
+    "leftGridColumn": 0,
+    "topGridRow": 2,
+    "bags": [
+      { "name": "Leather Bag", "x": 0, "y": 3, "width": 2, "height": 2 },
+      { "name": "Ranger Bag", "x": 2, "y": 2, "width": 2, "height": 3 },
+      { "name": "Leather Bag", "x": 4, "y": 3, "width": 2, "height": 2 }
+    ]
+  },
   "anchors": {
     "inventoryTitle": {
       "approxCenterX": 69,
