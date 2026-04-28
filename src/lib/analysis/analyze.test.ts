@@ -105,6 +105,41 @@ describe("analysis orchestrator", () => {
     expect(() => AnalysisResultSchema.parse(result)).not.toThrow();
   });
 
+  it("preserves bag metadata while grounding backpack items", async () => {
+    const result = await analyzeCorrectedState({
+      gameState: baseGameState({
+        bagChoice: "Ranger Bag",
+        backpackItems: [
+          {
+            name: "Ranger Bag",
+            location: "bag",
+            itemKind: "bag",
+            x: 0,
+            y: 0,
+            footprint: {
+              source: "user-confirmed",
+              cells: [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+              ],
+            },
+          },
+          { name: "Hero Sword", location: "bag", x: 0, y: 0 },
+        ],
+      }),
+      validation,
+      bpbCache: cache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(result.gameState.backpackItems[0]?.itemKind).toBe("bag");
+    expect(result.gameState.backpackItems[0]?.footprint?.source).toBe("user-confirmed");
+    expect(result.gameState.backpackItems[0]?.footprint?.cells).toEqual([
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+    ]);
+  });
+
   it("passes recognition provenance into the recommendation", async () => {
     const result = await analyzeCorrectedState({
       gameState: baseGameState({

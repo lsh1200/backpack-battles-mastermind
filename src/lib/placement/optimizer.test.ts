@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { GameState } from "@/lib/core/types";
-import { optimizePlacement } from "./optimizer";
+import {
+  bagAwareBoard,
+  classifyItemBagOccupancy,
+  optimizePlacement,
+  type BagAwareBoard,
+} from "./optimizer";
 
 function state(overrides: Partial<GameState>): GameState {
   return {
@@ -34,21 +39,40 @@ function state(overrides: Partial<GameState>): GameState {
 const targetItems = ["Broom", "Banana", "Stone", "Shiny Shell", "Walrus Tusk"];
 
 describe("optimizePlacement", () => {
-  it("returns rendered layout options but asks for confirmation when current coordinates are missing", () => {
+  it("refuses rendered layout options and asks for confirmation when bag data is missing", () => {
     const plan = optimizePlacement({ gameState: state({}), targetItems });
 
     expect(plan.layoutConfidence).toBe("needs-confirmation");
-    expect(plan.placementAdvice.join(" ")).toContain("confirm current item positions");
-    expect(plan.layoutOptions).toHaveLength(2);
-    expect(plan.layoutOptions[0].title).toBe("Tempo Weapons");
-    expect(plan.layoutOptions[0].cells.map((cell) => cell.item)).toContain("Broom");
+    expect(plan.placementAdvice.join(" ")).toContain("Confirm bag placement and bag shape");
+    expect(plan.layoutOptions).toEqual([]);
   });
 
   it("uses current coordinates to produce move instructions when layout is readable", () => {
     const plan = optimizePlacement({
       gameState: state({
         backpackItems: [
-          { name: "Ranger Bag", location: "bag", x: 0, y: 0 },
+          {
+            name: "Ranger Bag",
+            location: "bag",
+            itemKind: "bag",
+            x: 0,
+            y: 0,
+            footprint: {
+              source: "user-confirmed",
+              cells: [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 2, y: 0 },
+                { x: 3, y: 0 },
+                { x: 0, y: 1 },
+                { x: 1, y: 1 },
+                { x: 2, y: 1 },
+                { x: 3, y: 1 },
+                { x: 0, y: 2 },
+                { x: 1, y: 2 },
+              ],
+            },
+          },
           { name: "Wooden Sword", location: "bag", x: 1, y: 1 },
           { name: "Lucky Clover", location: "bag", x: 0, y: 2 },
         ],
@@ -61,5 +85,131 @@ describe("optimizePlacement", () => {
     expect(plan.layoutOptions[0].moves).toContain("Keep Wooden Sword at (1, 1).");
     expect(plan.layoutOptions[0].moves).toContain("Place Broom at (2, 1) as your second active weapon.");
     expect(plan.layoutOptions[1].tradeoffs.join(" ")).toContain("safer stamina");
+  });
+
+  it("derives active cells only from a placed bag footprint", () => {
+    const board = bagAwareBoard(
+      state({
+        backpackItems: [
+          {
+            name: "Ranger Bag",
+            location: "bag",
+            itemKind: "bag",
+            x: 2,
+            y: 1,
+            footprint: {
+              source: "user-confirmed",
+              cells: [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 0, y: 1 },
+              ],
+            },
+          },
+          { name: "Wooden Sword", location: "bag", x: 2, y: 1 },
+        ],
+      }),
+    );
+
+    expect(board.fullBoard).toEqual({ width: 10, height: 6 });
+    expect(board.activeBagCells).toEqual([
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+      { x: 2, y: 2 },
+    ]);
+    expect(board.usableCellKeys.has("0,0")).toBe(false);
+    expect(board.unusableCellKeys.has("0,0")).toBe(true);
+    expect(board.missingBagData).toEqual([]);
+  });
+
+  it("classifies item occupancy against active bag cells", () => {
+    const board: BagAwareBoard = {
+      fullBoard: { width: 10, height: 6 },
+      bags: [],
+      activeBagCells: [
+        { x: 1, y: 1 },
+        { x: 2, y: 1 },
+        { x: 1, y: 2 },
+      ],
+      usableCellKeys: new Set(["1,1", "2,1", "1,2"]),
+      unusableCellKeys: new Set(),
+      missingBagData: [],
+    };
+
+    expect(classifyItemBagOccupancy({ name: "Wooden Sword", location: "bag", x: 1, y: 1 }, board)).toBe(
+      "inside-bag",
+    );
+    expect(classifyItemBagOccupancy({ name: "Stone", location: "bag", x: 5, y: 5 }, board)).toBe("outside-bag");
+    expect(
+      classifyItemBagOccupancy(
+        {
+          name: "Broom",
+          location: "bag",
+          x: 1,
+          y: 1,
+          footprint: {
+            source: "local-data",
+            cells: [
+              { x: 0, y: 0 },
+              { x: 1, y: 0 },
+              { x: 2, y: 0 },
+            ],
+          },
+        },
+        board,
+      ),
+    ).toBe("partial");
+    expect(classifyItemBagOccupancy({ name: "Banana", location: "bag" }, board)).toBe("unknown");
+  });
+
+  it("places generated layouts only inside known active bag cells", () => {
+    const plan = optimizePlacement({
+      gameState: state({
+        backpackItems: [
+          {
+            name: "Ranger Bag",
+            location: "bag",
+            itemKind: "bag",
+            x: 0,
+            y: 0,
+            footprint: {
+              source: "user-confirmed",
+              cells: [
+                { x: 1, y: 1 },
+                { x: 2, y: 1 },
+                { x: 1, y: 0 },
+              ],
+            },
+          },
+          { name: "Wooden Sword", location: "bag", x: 1, y: 1 },
+          { name: "Lucky Clover", location: "bag", x: 0, y: 2 },
+        ],
+      }),
+      targetItems: ["Broom", "Stone"],
+    });
+
+    expect(plan.layoutConfidence).toBe("considered");
+    expect(plan.placementAdvice.join(" ")).toContain("Known bag space was considered");
+    expect(plan.layoutOptions[0].cells).toEqual([
+      { item: "Wooden Sword", x: 1, y: 1, width: 1, height: 1, role: "primary weapon" },
+      { item: "Broom", x: 2, y: 1, width: 1, height: 1, role: "second weapon" },
+      { item: "Stone", x: 1, y: 0, width: 1, height: 1, role: "weapon damage adjacency" },
+    ]);
+  });
+
+  it("refuses exact layout options when a bag is missing placement or footprint data", () => {
+    const plan = optimizePlacement({
+      gameState: state({
+        backpackItems: [
+          { name: "Ranger Bag", location: "bag", itemKind: "bag", x: 0, y: 0 },
+          { name: "Wooden Sword", location: "bag", x: 1, y: 1 },
+        ],
+      }),
+      targetItems,
+    });
+
+    expect(plan.layoutConfidence).toBe("needs-confirmation");
+    expect(plan.layoutOptions).toEqual([]);
+    expect(plan.placementAdvice.join(" ")).toContain("Confirm bag placement and bag shape");
   });
 });

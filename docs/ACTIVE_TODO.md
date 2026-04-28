@@ -36,7 +36,7 @@ This file is the source of truth for what Codex should do next. It exists to pre
 
 ### Task 17: Bag-Aware Board Model
 
-Status: `ready`
+Status: `done`
 
 Goal: Replace the current loose coordinate model with a Backpack Battles board model that understands bags as movable container items. Placement advice must know which board cells are unlocked by bag footprints, which items are inside those bags, and which cells are storage or unusable.
 
@@ -73,15 +73,15 @@ Required Behavior:
 
 Implementation Steps:
 
-- [ ] Step 1: Mark this task `in_progress`.
-- [ ] Step 2: Add failing board-model tests for one placed bag unlocking only its footprint cells.
-- [ ] Step 3: Add failing tests that classify items as inside, outside, partial, or unknown relative to bag cells.
-- [ ] Step 4: Add failing optimizer test proving full-board placement is not used when bag cells are known.
-- [ ] Step 5: Implement the minimal bag-aware board helpers.
-- [ ] Step 6: Wire optimizer/recommendation confidence to the bag-aware model.
-- [ ] Step 7: Update UI text only as needed so the user can see bag-space confidence.
-- [ ] Step 8: Run targeted placement/strategy/schema/UI tests.
-- [ ] Step 9: Run full verification:
+- [x] Step 1: Mark this task `in_progress`.
+- [x] Step 2: Add failing board-model tests for one placed bag unlocking only its footprint cells.
+- [x] Step 3: Add failing tests that classify items as inside, outside, partial, or unknown relative to bag cells.
+- [x] Step 4: Add failing optimizer test proving full-board placement is not used when bag cells are known.
+- [x] Step 5: Implement the minimal bag-aware board helpers.
+- [x] Step 6: Wire optimizer/recommendation confidence to the bag-aware model.
+- [x] Step 7: Update UI text only as needed so the user can see bag-space confidence.
+- [x] Step 8: Run targeted placement/strategy/schema/UI tests.
+- [x] Step 9: Run full verification:
 
 ```powershell
 npm.cmd run lint
@@ -90,23 +90,31 @@ npm.cmd run test
 npm.cmd run build
 ```
 
-- [ ] Step 10: Browser-check handoff resume with `1331d7ff-2153-4168-8223-beefd02a1d69`.
-- [ ] Step 11: Commit with message `feat: add bag-aware board model`.
-- [ ] Step 12: Push `codex/task-1-scaffold`.
-- [ ] Step 13: Mark this task `done` and record the commit hash.
+- [x] Step 10: Browser-check handoff resume with `1331d7ff-2153-4168-8223-beefd02a1d69`.
+- [x] Step 11: Commit with message `feat: add bag-aware board model`.
+- [x] Step 12: Push `codex/task-1-scaffold`.
+- [x] Step 13: Mark this task `done` and record the commit hash.
 
 Acceptance Checklist:
 
-- [ ] The optimizer distinguishes full board, active bag cells, and unusable cells.
-- [ ] The optimizer does not place items outside known active bag space.
-- [ ] The recommendation explains when bag placement was considered or is missing.
-- [ ] Tests cover known bag placement, unknown bag placement, and item occupancy classification.
-- [ ] No LLM prompt or recommendation implies raw image guessing is authoritative for bag occupancy.
+- [x] The optimizer distinguishes full board, active bag cells, and unusable cells.
+- [x] The optimizer does not place items outside known active bag space.
+- [x] The recommendation explains when bag placement was considered or is missing.
+- [x] Tests cover known bag placement, unknown bag placement, and item occupancy classification.
+- [x] No LLM prompt or recommendation implies raw image guessing is authoritative for bag occupancy.
 
 Verification Evidence:
 
-- Commit: pending.
-- Verification: pending.
+- Commit: `b45675e feat: add bag-aware board model`
+- RED targeted tests failed as expected before implementation: missing bag schema fields/helpers and old optimizer behavior.
+- Added regression coverage that analysis grounding preserves bag metadata.
+- `npm.cmd run test -- src/lib/core/schemas.test.ts src/lib/placement/optimizer.test.ts src/lib/strategy/recommend.test.ts src/components/RecommendationPanel.test.tsx` passed: 4 files, 30 tests.
+- `npm.cmd run test -- src/lib/analysis/analyze.test.ts` passed: 1 file, 4 tests.
+- `npm.cmd run lint` passed.
+- `npx.cmd tsc --noEmit -p tsconfig.json` passed.
+- `npm.cmd run test` passed: 18 files, 98 tests.
+- `npm.cmd run build` passed.
+- Browser resume check passed at `http://127.0.0.1:3000` with recreated local handoff `1331d7ff-2153-4168-8223-beefd02a1d69` from the user-provided screenshot: recommendation rendered, `Layout Confidence` showed `Needs Confirmation`, bag placement/shape confirmation rendered, and no exact layout options were shown.
 
 ## Completed Tasks
 

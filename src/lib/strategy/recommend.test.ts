@@ -139,12 +139,11 @@ describe("recommendNextAction", () => {
     expect(recommendation.bestAction.teachingReason).toContain("uses all 13 gold");
     expect(recommendation.layoutConfidence).toBe("needs-confirmation");
     expect(recommendation.recognitionPolicy.itemRecognition).toBe("mixed");
-    expect(recommendation.layoutOptions).toHaveLength(2);
-    expect(recommendation.layoutOptions[0].cells.map((cell) => cell.item)).toContain("Broom");
+    expect(recommendation.layoutOptions).toEqual([]);
     expect(recommendation.placementAdvice).toEqual([
-      "Layout confidence is low because current bag coordinates are missing; confirm current item positions before treating this as exact.",
-      "Option 1 keeps Wooden Sword and Broom as active weapons, with Stone touching a weapon.",
-      "Option 2 gives Banana a safer support position first, then fits damage/utility pieces around the weapons.",
+      "Confirm bag placement and bag shape before treating layout moves as exact.",
+      "Ranger Bag placement is unknown.",
+      "Ranger Bag footprint is unknown.",
     ]);
   });
 
@@ -154,7 +153,28 @@ describe("recommendNextAction", () => {
         round: 1,
         gold: 13,
         backpackItems: [
-          { name: "Ranger Bag", location: "bag", x: 0, y: 0 },
+          {
+            name: "Ranger Bag",
+            location: "bag",
+            itemKind: "bag",
+            x: 0,
+            y: 0,
+            footprint: {
+              source: "user-confirmed",
+              cells: [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 2, y: 0 },
+                { x: 3, y: 0 },
+                { x: 0, y: 1 },
+                { x: 1, y: 1 },
+                { x: 2, y: 1 },
+                { x: 3, y: 1 },
+                { x: 0, y: 2 },
+                { x: 1, y: 2 },
+              ],
+            },
+          },
           { name: "Wooden Sword", location: "bag", x: 1, y: 1 },
           { name: "Lucky Clover", location: "bag", x: 0, y: 2 },
         ],
@@ -172,6 +192,66 @@ describe("recommendNextAction", () => {
 
     expect(recommendation.layoutConfidence).toBe("considered");
     expect(recommendation.layoutOptions[0].moves).toContain("Keep Wooden Sword at (1, 1).");
+  });
+
+  it("explains when known bag space was considered for placement", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        round: 1,
+        gold: 8,
+        backpackItems: [
+          {
+            name: "Ranger Bag",
+            location: "bag",
+            itemKind: "bag",
+            x: 0,
+            y: 0,
+            footprint: {
+              source: "user-confirmed",
+              cells: [
+                { x: 1, y: 1 },
+                { x: 2, y: 1 },
+                { x: 1, y: 0 },
+              ],
+            },
+          },
+          { name: "Wooden Sword", location: "bag", x: 1, y: 1 },
+        ],
+        shopItems: [
+          { name: "Stone", slot: "top-right", sale: false, price: 1 },
+          { name: "Broom", slot: "bottom-center", sale: false, price: 4 },
+        ],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.layoutConfidence).toBe("considered");
+    expect(recommendation.placementAdvice.join(" ")).toContain("Known bag space was considered");
+    expect(recommendation.layoutOptions[0].cells.every((cell) => cell.x <= 2 && cell.y <= 1)).toBe(true);
+  });
+
+  it("asks for bag confirmation instead of exact layouts when bag shape is missing", () => {
+    const recommendation = recommendNextAction({
+      gameState: baseState({
+        round: 1,
+        gold: 8,
+        backpackItems: [
+          { name: "Ranger Bag", location: "bag", itemKind: "bag", x: 0, y: 0 },
+          { name: "Wooden Sword", location: "bag", x: 1, y: 1 },
+        ],
+        shopItems: [
+          { name: "Stone", slot: "top-right", sale: false, price: 1 },
+          { name: "Broom", slot: "bottom-center", sale: false, price: 4 },
+        ],
+      }),
+      bpbCache,
+      correctionPromptsUsed: [],
+    });
+
+    expect(recommendation.layoutConfidence).toBe("needs-confirmation");
+    expect(recommendation.layoutOptions).toEqual([]);
+    expect(recommendation.placementAdvice.join(" ")).toContain("Confirm bag placement and bag shape");
   });
 
   it("does not recommend buying a sale item the player cannot afford", () => {

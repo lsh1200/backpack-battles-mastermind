@@ -10,11 +10,23 @@ export const ShopItemSchema = z.object({
   groundedBpbId: z.number().int().nonnegative().optional(),
 });
 
+export const FootprintCellSchema = z.object({
+  x: z.number().int().nonnegative(),
+  y: z.number().int().nonnegative(),
+});
+
+export const ItemFootprintSchema = z.object({
+  source: z.enum(["local-data", "user-confirmed", "manual", "unknown"]),
+  cells: z.array(FootprintCellSchema).min(1),
+});
+
 export const BackpackItemSchema = z.object({
   name: z.string().min(1),
   location: z.enum(["bag", "storage", "shop", "unknown"]),
+  itemKind: z.enum(["item", "bag"]).optional(),
   x: z.number().int().nonnegative().optional(),
   y: z.number().int().nonnegative().optional(),
+  footprint: ItemFootprintSchema.optional(),
   groundedBpbId: z.number().int().nonnegative().optional(),
 });
 

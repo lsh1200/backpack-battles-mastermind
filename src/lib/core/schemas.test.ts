@@ -70,6 +70,46 @@ describe("core schemas", () => {
     expect(recommendation.layoutOptions[0].cells[0].item).toBe("Wooden Sword");
   });
 
+  it("accepts bag items with relative footprints and footprint source", () => {
+    const state = GameStateSchema.parse({
+      round: 1,
+      gold: 13,
+      lives: 5,
+      wins: 0,
+      className: "Ranger",
+      bagChoice: "Ranger Bag",
+      skills: [],
+      subclass: null,
+      shopItems: [],
+      backpackItems: [
+        {
+          name: "Ranger Bag",
+          location: "bag",
+          itemKind: "bag",
+          x: 2,
+          y: 1,
+          footprint: {
+            source: "user-confirmed",
+            cells: [
+              { x: 0, y: 0 },
+              { x: 1, y: 0 },
+            ],
+          },
+        },
+      ],
+      storageItems: [],
+      userGoal: "learn",
+      uncertainFields: [],
+    });
+
+    expect(state.backpackItems[0].itemKind).toBe("bag");
+    expect(state.backpackItems[0].footprint?.source).toBe("user-confirmed");
+    expect(state.backpackItems[0].footprint?.cells).toEqual([
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+    ]);
+  });
+
   it("accepts the full analysis result shape", () => {
     const result = AnalysisResultSchema.parse({
       gameState: {

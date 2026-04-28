@@ -43,8 +43,10 @@ function groundBackpackItem(item: BackpackItem, bpbCache: BpbCache | null): Back
   const base = {
     name: item.name,
     location: item.location,
+    ...(item.itemKind !== undefined ? { itemKind: item.itemKind } : {}),
     ...(item.x !== undefined ? { x: item.x } : {}),
     ...(item.y !== undefined ? { y: item.y } : {}),
+    ...(item.footprint !== undefined ? { footprint: item.footprint } : {}),
   };
 
   return groundedBpbId === undefined ? base : { ...base, groundedBpbId };

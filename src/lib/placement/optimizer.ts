@@ -1,5 +1,16 @@
 import type { GameState, Recommendation } from "@/lib/core/types";
-import { allBackpackItemsHaveCoordinates, coordinateLabel, currentPositionByName } from "./board";
+import {
+  allBackpackItemsHaveCoordinates,
+  bagAwareBoard,
+  classifyItemBagOccupancy,
+  coordinateLabel,
+  currentPositionByName,
+  isBagItem,
+  isCellInsideKnownBagSpace,
+  type BagAwareBoard,
+} from "./board";
+
+export { bagAwareBoard, classifyItemBagOccupancy, type BagAwareBoard } from "./board";
 
 type LayoutConfidence = Recommendation["layoutConfidence"];
 type LayoutOption = Recommendation["layoutOptions"][number];
@@ -40,8 +51,18 @@ function relevantNames(gameState: GameState, targetItems: string[]): Set<string>
   ]);
 }
 
-function cellsForRelevantItems(cells: PlannedCell[], names: Set<string>): PlannedCell[] {
-  return cells.filter((cell) => names.has(cell.item));
+function cellsForRelevantItems(cells: PlannedCell[], names: Set<string>, board: BagAwareBoard): PlannedCell[] {
+  return cells.filter((cell) => {
+    if (!names.has(cell.item)) {
+      return false;
+    }
+
+    if (board.activeBagCells.length === 0) {
+      return true;
+    }
+
+    return isCellInsideKnownBagSpace(cell, board);
+  });
 }
 
 function targetAction(cell: PlannedCell): string {
@@ -105,8 +126,21 @@ function buildOption(input: {
 
 export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan {
   const names = relevantNames(input.gameState, input.targetItems);
-  const tempoCells = cellsForRelevantItems(TEMPO_WEAPON_CELLS, names);
-  const staminaCells = cellsForRelevantItems(STAMINA_SAFE_CELLS, names);
+  const board = bagAwareBoard(input.gameState);
+
+  if (board.missingBagData.length > 0 || board.activeBagCells.length === 0) {
+    return {
+      layoutConfidence: "needs-confirmation",
+      placementAdvice: [
+        "Confirm bag placement and bag shape before treating layout moves as exact.",
+        ...board.missingBagData,
+      ],
+      layoutOptions: [],
+    };
+  }
+
+  const tempoCells = cellsForRelevantItems(TEMPO_WEAPON_CELLS, names, board);
+  const staminaCells = cellsForRelevantItems(STAMINA_SAFE_CELLS, names, board);
 
   if (tempoCells.length === 0 && staminaCells.length === 0) {
     return {
@@ -116,18 +150,26 @@ export function optimizePlacement(input: OptimizePlacementInput): PlacementPlan 
     };
   }
 
-  const layoutConfidence: LayoutConfidence = allBackpackItemsHaveCoordinates(input.gameState)
-    ? "considered"
-    : "needs-confirmation";
+  const outsideItems = input.gameState.backpackItems.filter(
+    (item) => !isBagItem(item, input.gameState) && classifyItemBagOccupancy(item, board) === "outside-bag",
+  );
+  const unknownItems = input.gameState.backpackItems.filter(
+    (item) => !isBagItem(item, input.gameState) && classifyItemBagOccupancy(item, board) === "unknown",
+  );
+  const layoutConfidence: LayoutConfidence =
+    allBackpackItemsHaveCoordinates(input.gameState) && unknownItems.length === 0 ? "considered" : "needs-confirmation";
   const placementAdvice =
     layoutConfidence === "considered"
       ? [
-          "Current bag coordinates were considered when generating these options.",
+          "Known bag space was considered when generating these options.",
+          ...(outsideItems.length
+            ? [`${outsideItems.map((item) => item.name).join(", ")} appear outside known active bag space; confirm storage or bag placement.`]
+            : []),
           "Option 1 maximizes early weapon tempo by keeping Wooden Sword and Broom active with Stone adjacency.",
           "Option 2 protects Banana support first, then fits damage and utility pieces around the weapons.",
         ]
       : [
-          "Layout confidence is low because current bag coordinates are missing; confirm current item positions before treating this as exact.",
+          "Layout confidence is low because item positions or active bag cells need confirmation.",
           "Option 1 keeps Wooden Sword and Broom as active weapons, with Stone touching a weapon.",
           "Option 2 gives Banana a safer support position first, then fits damage/utility pieces around the weapons.",
         ];

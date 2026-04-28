@@ -69,4 +69,20 @@ describe("RecommendationPanel", () => {
     expect(markup).toContain("Item Recognition");
     expect(markup).toContain("local-first");
   });
+
+  it("renders bag-space confidence text when placement needs confirmation", () => {
+    const markup = renderToStaticMarkup(
+      <RecommendationPanel
+        recommendation={{
+          ...recommendation,
+          layoutConfidence: "needs-confirmation",
+          placementAdvice: ["Confirm bag placement and bag shape before treating layout moves as exact."],
+          layoutOptions: [],
+        }}
+      />,
+    );
+
+    expect(markup).toContain("Needs Confirmation");
+    expect(markup).toContain("Confirm bag placement and bag shape before treating layout moves as exact.");
+  });
 });
